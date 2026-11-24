@@ -21,7 +21,11 @@ import { clinicaService, profissionalService } from '../services/api';
  * Tela de Consulta de Clínicas do ProntoVital.
  * Visual 100% fiel ao protótipo, consumindo exclusivamente a API REST.
  */
-export default function ClinicasScreen({ navigation, onNavigateToProfissionais }) {
+export default function ClinicasScreen({
+  navigation,
+  onNavigateToProfissionais,
+  onLogout,
+}) {
   const [clinicas, setClinicas] = useState([]);
   const [contagemProfissionais, setContagemProfissionais] = useState({});
   const [termoBusca, setTermoBusca] = useState('');
@@ -115,14 +119,27 @@ export default function ClinicasScreen({ navigation, onNavigateToProfissionais }
       {/* Topo / Header Branco com Logo e Menu */}
       <View style={styles.headerContainer}>
         <LogoProntoVital />
-        <TouchableOpacity
-          style={styles.menuBotao}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Menu"
-        >
-          <IconeMenu color="#334155" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.menuBotao}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Menu"
+          >
+            <IconeMenu color="#334155" />
+          </TouchableOpacity>
+          {onLogout ? (
+            <TouchableOpacity
+              style={styles.logoutBotao}
+              activeOpacity={0.7}
+              onPress={onLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Sair da conta"
+            >
+              <Text style={styles.logoutTexto}>Sair</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {/* Corpo da Tela com Fundo Claro */}
@@ -218,6 +235,20 @@ const styles = StyleSheet.create({
     padding: 6,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutBotao: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  logoutTexto: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '700',
   },
   corpo: {
     flex: 1,
