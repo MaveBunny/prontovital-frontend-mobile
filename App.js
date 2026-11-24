@@ -1,55 +1,74 @@
-import React from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  StatusBar as RNStatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Feather } from '@expo/vector-icons';
-import Button from './src/components/shared/Button';
 import AuthScreen from './src/features/auth/screens/AuthScreen';
 import { AuthProvider, useAuth } from './src/shared/context/AuthContext';
 import { colors } from './src/shared/theme/colors';
+import ClinicasScreen from './src/screens/ClinicasScreen';
+import ProfissionaisScreen from './src/screens/ProfissionaisScreen';
 
 function RootNavigator() {
-  const { autenticado, inicializando, usuario, logout } = useAuth();
+  const { autenticado, inicializando, logout } = useAuth();
+  const [telaAtiva, setTelaAtiva] = useState('Clinicas');
+  const [parametrosRota, setParametrosRota] = useState({});
+
+  const navegarPara = (nomeTela, params = {}) => {
+    setParametrosRota(params);
+    setTelaAtiva(nomeTela);
+  };
+
+  useEffect(() => {
+    if (!autenticado) {
+      setTelaAtiva('Clinicas');
+      setParametrosRota({});
+    }
+  }, [autenticado]);
 
   if (inicializando) {
     return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={colors.brandAccent} />
-      </View>
+      <>
+        <StatusBar style="light" backgroundColor={colors.brandDark} />
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator size="large" color={colors.brandAccent} />
+        </View>
+      </>
     );
   }
 
   if (!autenticado) {
-    return <AuthScreen />;
+    return (
+      <>
+        <StatusBar style="light" backgroundColor={colors.brandDark} />
+        <AuthScreen />
+      </>
+    );
   }
 
-  const perfil = String(usuario?.perfil || usuario?.tipo || 'paciente').toUpperCase();
+  const navigation = {
+    navigate: (nomeTela, params) => navegarPara(nomeTela, params),
+    goBack: () => navegarPara('Clinicas'),
+  };
 
   return (
-    <View style={styles.homeSafe}>
-      <View style={styles.homeHeader}>
-        <Text style={styles.homeBrand}>
-          Pronto<Text style={styles.homeBrandBlue}>Vital</Text>
-        </Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>{perfil}</Text>
-        </View>
-      </View>
+    <View style={styles.container}>
+      <StatusBar style="dark" backgroundColor="#FFFFFF" />
 
-      <View style={styles.homeBody}>
-        <View style={styles.welcomeCard}>
-          <Feather name="check-circle" size={36} color={colors.success} />
-          <Text style={styles.welcomeTitle}>Olá, {usuario?.nome || 'Usuário'}!</Text>
-          <Text style={styles.welcomeEmail}>{usuario?.email}</Text>
-          <Button variant="secondary" onPress={logout}>Sair da conta</Button>
-        </View>
-      </View>
+      {telaAtiva === 'Clinicas' ? (
+        <ClinicasScreen
+          navigation={navigation}
+          onNavigateToProfissionais={(params) =>
+            navegarPara('Profissionais', params)
+          }
+          onLogout={logout}
+        />
+      ) : (
+        <ProfissionaisScreen
+          navigation={navigation}
+          filtroInicialClinica={parametrosRota?.clinicaNome || ''}
+          route={{ params: parametrosRota }}
+          onVoltar={() => navegarPara('Clinicas')}
+        />
+      )}
     </View>
   );
 }
@@ -57,24 +76,15 @@ function RootNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <StatusBar style="light" backgroundColor={colors.brandDark} />
       <RootNavigator />
     </AuthProvider>
   );
 }
 
-const TOP_INSET = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) + 8 : 48;
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   loadingScreen: { flex: 1, backgroundColor: colors.brandDark, alignItems: 'center', justifyContent: 'center' },
-  homeSafe: { flex: 1, backgroundColor: colors.brandDark, paddingTop: TOP_INSET },
-  homeHeader: { paddingHorizontal: 24, paddingVertical: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  homeBrand: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  homeBrandBlue: { color: colors.brandAccent },
-  roleBadge: { backgroundColor: 'rgba(96, 165, 250, 0.2)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
-  roleBadgeText: { color: '#93C5FD', fontSize: 11, fontWeight: '800' },
-  homeBody: { flex: 1, backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, justifyContent: 'center' },
-  welcomeCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: colors.borderLight },
-  welcomeTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginTop: 12 },
-  welcomeEmail: { fontSize: 13, color: colors.textMuted, marginTop: 4, marginBottom: 20 },
 });
