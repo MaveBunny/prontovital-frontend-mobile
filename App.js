@@ -15,6 +15,7 @@ import ClinicasScreen from "./src/screens/ClinicasScreen";
 import ProfissionaisScreen from "./src/screens/ProfissionaisScreen";
 import AppHeader from "./src/components/shared/AppHeader";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import PerfilScreen from "./src/screens/PerfilScreen";
 
 function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
   return (
@@ -132,13 +133,7 @@ function RootNavigator() {
         );
 
       case "Perfil":
-        return (
-          <TelaEmConstrucao
-            titulo="Meu Perfil"
-            telaAtiva="Perfil"
-            navegarPara={navegarPara}
-          />
-        );
+        return <PerfilScreen navigation={navigation} />;
 
       default:
         return <HomeScreen navigation={navigation} />;
