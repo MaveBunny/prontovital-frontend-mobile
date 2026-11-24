@@ -44,8 +44,6 @@ export default function AuthScreen() {
           <HeroHeader compact={aba === 'cadastrar'} />
 
           <View style={styles.sheetContainer}>
-            <View style={styles.sheetHandle} />
-
             <View style={styles.segmentedTrack}>
               {ABAS.map((item) => {
                 const ativa = aba === item.id;
@@ -91,8 +89,7 @@ const styles = StyleSheet.create({
   flexOne: { flex: 1 },
   scrollView: { flex: 1, backgroundColor: colors.surface },
   scrollContent: { flexGrow: 1, backgroundColor: colors.brandDark },
-  sheetContainer: { flexGrow: 1, backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 12, paddingBottom: 40 },
-  sheetHandle: { width: 38, height: 4, borderRadius: 999, backgroundColor: colors.borderLight, alignSelf: 'center', marginBottom: 16 },
+  sheetContainer: { flexGrow: 1, backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 40 },
   segmentedTrack: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: 14, padding: 4, marginBottom: 20 },
   segmentButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 46, borderRadius: 11 },
   segmentButtonActive: { backgroundColor: colors.surface, elevation: 2 },
