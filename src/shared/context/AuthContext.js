@@ -4,13 +4,14 @@ import React, {
   useContext,
   useEffect,
   useState,
-} from 'react';
-import { setOnUnauthorized } from '../../lib/api';
+} from "react";
+import { setOnUnauthorized } from "../../lib/api";
 import {
   carregarSessaoSalva,
   login as loginService,
   logout as logoutService,
-} from '../../lib/authService';
+} from "../../lib/authService";
+import { registrarPushNotification } from "../../lib/pushNotificationService";
 
 export const AuthContext = createContext(null);
 
@@ -34,6 +35,7 @@ export function AuthProvider({ children }) {
         if (sessao.token && sessao.usuario) {
           setUsuario(sessao.usuario);
           setAutenticado(true);
+          registrarPushNotification();
         }
       })
       .finally(() => setInicializando(false));
@@ -45,6 +47,7 @@ export function AuthProvider({ children }) {
       const data = await loginService(credentials);
       setUsuario(data.usuario);
       setAutenticado(true);
+      registrarPushNotification();
       return data;
     } finally {
       setCarregando(false);
@@ -63,7 +66,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
+    throw new Error("useAuth deve ser utilizado dentro de um AuthProvider");
   }
   return context;
 }
