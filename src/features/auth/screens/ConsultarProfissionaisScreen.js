@@ -12,6 +12,7 @@ import {
   BackHandler,
   Keyboard,
   Platform,
+  TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { listarEspecialidades, listarProfissionais } from '../../../lib/profissionaisApi';
@@ -19,7 +20,6 @@ import AgendarConsultaModal from '../components/AgendarConsultaModal';
 import { useAuth } from '../../../shared/context/AuthContext';
 import AppHeader from '../../../components/shared/AppHeader';
 import Button from '../../../components/shared/Button';
-import Input from '../../../components/shared/Input';
 import { colors } from '../../../shared/theme/colors';
 
 function mensagemDeErro(erro) {
@@ -161,7 +161,7 @@ function ConsultaDoPaciente({
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}></Text>
+            <Feather name="user" size={30} color={colors.primary} />
           </View>
 
           <View style={styles.cardInfo}>
@@ -171,21 +171,19 @@ function ConsultaDoPaciente({
             </View>
             {conselho ? <Text style={styles.conselhoText}>{conselho}</Text> : null}
             <View style={styles.clinicaRow}>
-              <Text style={styles.clinicaIcone}>🏥</Text>
+              <Feather name="home" size={14} color={colors.primary} />
               <Text style={styles.clinicaText}>{clinicasNomes || 'Clínica não informada'}</Text>
             </View>
           </View>
         </View>
         {podeAgendar ? (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={`Agendar consulta com ${nome}`}
+          <Button
+            leftIcon="calendar"
             onPress={() => setProfissionalSelecionado(item)}
             style={styles.agendarButton}
           >
-            <Feather name="calendar" size={16} color="#FFFFFF" />
-            <Text style={styles.agendarButtonText}>Agendar consulta</Text>
-          </TouchableOpacity>
+            Agendar consulta
+          </Button>
         ) : null}
       </View>
     );
@@ -194,7 +192,10 @@ function ConsultaDoPaciente({
   return (
     <View style={styles.content}>
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.headerTitulo}>Consultar profissionais</Text>
+        <Text accessibilityRole="header" style={styles.headerTitulo}>Profissionais</Text>
+        <Text style={styles.headerSubtitle}>
+          Encontre especialistas disponíveis nas clínicas credenciadas.
+        </Text>
         {mostrarBotaoNovoProfissional ? (
           <Button
             leftIcon="plus"
@@ -223,17 +224,21 @@ function ConsultaDoPaciente({
             </View>
           </View>
         ) : null}
-        <Input
-            label="Buscar por profissional ou clínica"
-            leftIcon="search"
-            placeholder="Digite um nome"
-            accessibilityLabel="Nome do profissional ou da clínica"
-            value={termoBusca}
+        <View style={styles.searchBox}>
+          <Feather name="search" size={19} color={colors.textPlaceholder} />
+          <TextInput
+            accessibilityLabel="Buscar por profissional ou clínica"
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={setTermoBusca}
             onSubmitEditing={buscar}
+            placeholder="Buscar por profissional ou clínica..."
+            placeholderTextColor={colors.textPlaceholder}
             returnKeyType="search"
-        />
-        <Button onPress={buscar} rightIcon="search" style={styles.actionButton}>Buscar</Button>
+            style={styles.searchInput}
+            value={termoBusca}
+          />
+        </View>
         <Text style={styles.rotuloEspecialidade}>Especialidade</Text>
         <TouchableOpacity
           accessibilityRole="button"
@@ -375,18 +380,43 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 24,
     paddingBottom: 10,
     backgroundColor: colors.surfaceInput,
   },
   headerTitulo: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: colors.textPrimary,
-    marginBottom: 14,
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textMuted,
+    marginBottom: 18,
   },
   newProfessionalButton: { marginBottom: 12 },
   actionButton: { marginBottom: 12 },
+  searchBox: {
+    minHeight: 56,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 54,
+    marginLeft: 12,
+    paddingVertical: 0,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
   filtroAtivoContainer: {
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
@@ -430,7 +460,7 @@ const styles = StyleSheet.create({
   },
   rotuloEspecialidade: { marginTop: 2, marginBottom: 8, color: colors.textSecondary, fontWeight: '700' },
   dropdownTrigger: {
-    minHeight: 54,
+    minHeight: 50,
     marginBottom: 8,
     paddingHorizontal: 16,
     borderRadius: 14,
@@ -501,18 +531,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   listContent: {
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingTop: 6,
+    paddingBottom: 30,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    elevation: 2,
+    borderColor: colors.borderLight,
+    elevation: 1,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -523,76 +553,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F0FDFA',
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 22,
+    marginRight: 14,
   },
   cardInfo: {
     flex: 1,
   },
   agendarButton: {
-    minHeight: 44,
+    minHeight: 46,
     marginTop: 14,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  agendarButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    borderRadius: 12,
   },
   nomeProfissional: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 5,
   },
   badgeEspecialidade: {
     alignSelf: 'flex-start',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginBottom: 4,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginBottom: 5,
   },
   badgeEspecialidadeTexto: {
-    fontSize: 11,
-    color: '#15803D',
-    fontWeight: '600',
+    fontSize: 12,
+    color: colors.primaryText,
+    fontWeight: '700',
   },
   conselhoText: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 14,
+    color: colors.textMuted,
     marginBottom: 2,
   },
   clinicaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
-  },
-  clinicaIcone: {
-    fontSize: 11,
-    marginRight: 4,
+    marginTop: 4,
+    gap: 6,
   },
   clinicaText: {
     flexShrink: 1,
-    fontSize: 12,
+    fontSize: 14,
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
