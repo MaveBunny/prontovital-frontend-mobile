@@ -21,12 +21,6 @@
         "backgroundColor": "#1B2438"
       },
       "edgeToEdgeEnabled": true
-    },
-    "extra": {
-      "eas": {
-        "projectId": "ccdd461b-487a-4883-ba51-42f1950aaeac"
-      }
-    },
-    "owner": "luzvsc"
+    }
   }
 }
