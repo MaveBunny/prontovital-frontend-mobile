@@ -11,10 +11,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppHeader from './src/components/shared/AppHeader';
 import AdminLayout from './src/features/admin/components/AdminLayout';
 import AuthScreen from './src/features/auth/screens/AuthScreen';
+import ProfissionaisScreen from './src/features/auth/screens/ConsultarProfissionaisScreen';
 import ClinicasScreen from './src/screens/ClinicasScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
-import ProfissionaisScreen from './src/screens/ProfissionaisScreen';
 import { AuthProvider, useAuth } from './src/shared/context/AuthContext';
 import { colors } from './src/shared/theme/colors';
 

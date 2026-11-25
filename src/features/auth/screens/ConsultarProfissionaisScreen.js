@@ -2,21 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   FlatList,
+  Modal,
+  Pressable,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   RefreshControl,
-  ScrollView,
   BackHandler,
   Keyboard,
   Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { listarEspecialidades, listarProfissionais } from '../../../lib/profissionaisApi';
 import { useAuth } from '../../../shared/context/AuthContext';
+import AppHeader from '../../../components/shared/AppHeader';
+import Button from '../../../components/shared/Button';
+import Input from '../../../components/shared/Input';
+import { colors } from '../../../shared/theme/colors';
 
 function mensagemDeErro(erro) {
   if (erro?.response?.status === 401) return 'Sua sessão terminou. Entre novamente.';
@@ -25,7 +28,6 @@ function mensagemDeErro(erro) {
   return 'Não foi possível carregar os dados. Confira a conexão e tente novamente.';
 }
 
-// Cada lista tem o próprio carregamento, erro e botão de nova tentativa.
 function useLista(carregar, manterDados = false) {
   const [estado, setEstado] = useState({ dados: [], carregando: true, erro: '', jaConsultou: false });
   const [tentativa, setTentativa] = useState(0);
@@ -45,16 +47,6 @@ function useLista(carregar, manterDados = false) {
   return { ...estado, repetir: () => setTentativa(n => n + 1) };
 }
 
-/**
- * Tela de Listagem e Consulta de Profissionais.
- * Suporta filtro inicial por clínica via parâmetros de navegação.
- *
- * @param {Object} props
- * @param {Object} [props.route] - Parâmetros enviados pela tela de clínicas
- * @param {Object} [props.navigation] - Objeto de navegação fornecido pelo App.js
- * @param {string} [props.filtroInicialClinica] - Nome da clínica para filtrar inicialmente
- * @param {Function} [props.onVoltar] - Callback para voltar à tela anterior
- */
 export default function ProfissionaisScreen({
   route,
   navigation,
@@ -63,6 +55,7 @@ export default function ProfissionaisScreen({
 }) {
   const { usuario } = useAuth();
   const voltar = onVoltar || navigation?.goBack;
+  const navegarPara = tela => navigation?.navigate?.(tela);
   useEffect(() => {
     if (Platform.OS !== 'android' || !voltar) return;
     const evento = BackHandler.addEventListener('hardwareBackPress', () => { voltar(); return true; });
@@ -72,25 +65,34 @@ export default function ProfissionaisScreen({
   const paciente = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase() === 'paciente';
   if (!paciente) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
+        <AppHeader telaAtiva="Profissionais" onNavigate={navegarPara} />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>Esta consulta é destinada ao paciente.</Text>
-          <TouchableOpacity accessibilityRole="button" style={styles.botaoVoltar} onPress={voltar}>
-            <Text style={styles.botaoVoltarTexto}>Voltar para clínicas</Text>
-          </TouchableOpacity>
+          <Button variant="secondary" onPress={voltar}>Voltar para clínicas</Button>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const nome = route?.params?.clinicaNome || filtroInicialClinica || '';
   const id = route?.params?.idClinica ?? null;
-  return <ConsultaDoPaciente key={JSON.stringify([id, nome])} nomeClinica={nome} idClinica={id} onVoltar={voltar} />;
+  return (
+    <View style={styles.safeArea}>
+      <AppHeader telaAtiva="Profissionais" onNavigate={navegarPara} />
+      <ConsultaDoPaciente
+        key={JSON.stringify([id, nome])}
+        nomeClinica={nome}
+        idClinica={id}
+      />
+    </View>
+  );
 }
 
-function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
+function ConsultaDoPaciente({ nomeClinica, idClinica }) {
   const [clinica, setClinica] = useState((nomeClinica || idClinica != null) ? { nome: nomeClinica, id: idClinica } : null);
   const [termoBusca, setTermoBusca] = useState('');
+  const [dropdownEspecialidadeAberto, setDropdownEspecialidadeAberto] = useState(false);
   const [filtros, setFiltros] = useState({ busca: '', idEspecialidade: null, atualizar: false });
   const carregar = useCallback(async signal => {
     const dados = await listarProfissionais({
@@ -98,13 +100,11 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
       idEspecialidade: filtros.idEspecialidade,
     }, signal);
     if (!clinica) return dados;
-    // Na API, busca também encontra nomes parecidos. Confira o vínculo da clínica selecionada.
     return dados.filter(p => p.Clinicas?.some(c => clinica.id != null
       ? String(c.id_clinica) === String(clinica.id)
       : c.User?.nome?.trim().toLowerCase() === clinica.nome.trim().toLowerCase()));
   }, [clinica, filtros]);
   const lista = useLista(carregar, filtros.atualizar);
-  // Primeiro carregue os profissionais; falhar no catálogo não impede a busca por nome.
   const catalogo = useLista(lista.jaConsultou ? listarEspecialidades : null);
 
   const buscar = () => {
@@ -114,6 +114,7 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
   const selecionarEspecialidade = idEspecialidade => {
     Keyboard.dismiss();
     setFiltros(f => ({ ...f, idEspecialidade, atualizar: false }));
+    setDropdownEspecialidadeAberto(false);
   };
   const handleRemoverFiltroClinica = () => {
     setClinica(null);
@@ -122,8 +123,14 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
   const limparFiltros = () => {
     setClinica(null);
     setTermoBusca('');
+    setDropdownEspecialidadeAberto(false);
     setFiltros({ busca: '', idEspecialidade: null, atualizar: false });
   };
+  const especialidades = [{ id_especialidade: null, nome: 'Todas as especialidades' }, ...catalogo.dados];
+  const especialidadeSelecionada = filtros.idEspecialidade == null
+    ? 'Todas as especialidades'
+    : catalogo.dados.find(e => String(e.id_especialidade) === String(filtros.idEspecialidade))?.nome
+      || 'Especialidade selecionada';
 
   const renderCardProfissional = ({ item }) => {
     const nome = item.User?.nome || 'Profissional';
@@ -159,25 +166,10 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-
-      {/* Header */}
+    <View style={styles.content}>
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.botaoVoltar}
-            onPress={onVoltar}
-            accessibilityRole="button"
-            accessibilityLabel="Voltar para clínicas"
-          >
-            <Text style={styles.botaoVoltarTexto}>‹ Voltar</Text>
-          </TouchableOpacity>
-          <Text accessibilityRole="header" style={styles.headerTitulo}>Profissionais</Text>
-          <View style={{ width: 60 }} />
-        </View>
+        <Text accessibilityRole="header" style={styles.headerTitulo}>Consultar profissionais</Text>
 
-        {/* Tag indicadora do Filtro Ativo por Clínica */}
         {clinica ? (
           <View style={styles.filtroAtivoContainer}>
             <Text style={styles.filtroAtivoLabel}>Filtrando por clínica:</Text>
@@ -196,47 +188,43 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
             </View>
           </View>
         ) : null}
-        <View style={styles.buscaContainer}>
-          <Text style={styles.iconeBusca}>🔍</Text>
-          <TextInput
-            style={styles.inputBusca}
-            placeholder="Buscar por profissional ou clínica"
+        <Input
+            label="Buscar por profissional ou clínica"
+            leftIcon="search"
+            placeholder="Digite um nome"
             accessibilityLabel="Nome do profissional ou da clínica"
-            placeholderTextColor="#64748B"
             value={termoBusca}
             onChangeText={setTermoBusca}
             onSubmitEditing={buscar}
             returnKeyType="search"
-          />
-          <TouchableOpacity accessibilityRole="button" onPress={buscar} style={styles.acaoBusca}>
-            <Text style={styles.botaoVoltarTexto}>Buscar</Text>
-          </TouchableOpacity>
-        </View>
+        />
+        <Button onPress={buscar} rightIcon="search" style={styles.actionButton}>Buscar</Button>
         <Text style={styles.rotuloEspecialidade}>Especialidade</Text>
-        <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={styles.opcoes}>
-          {[{ id_especialidade: null, nome: 'Todas' }, ...catalogo.dados].map(e => {
-            const ativa = e.id_especialidade === filtros.idEspecialidade;
-            return (
-              <TouchableOpacity key={String(e.id_especialidade)} accessibilityRole="button"
-                accessibilityState={{ selected: ativa }} onPress={() => selecionarEspecialidade(e.id_especialidade)}
-                style={[styles.opcao, ativa && styles.opcaoAtiva]}>
-                <Text style={[styles.botaoVoltarTexto, ativa && styles.textoOpcaoAtiva]}>{e.nome}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Especialidade: ${especialidadeSelecionada}`}
+          accessibilityState={{
+            expanded: dropdownEspecialidadeAberto,
+            disabled: catalogo.carregando || !!catalogo.erro,
+          }}
+          disabled={catalogo.carregando || !!catalogo.erro}
+          onPress={() => setDropdownEspecialidadeAberto(true)}
+          style={[styles.dropdownTrigger, (catalogo.carregando || !!catalogo.erro) && styles.dropdownDisabled]}
+        >
+          <Text style={styles.dropdownTriggerText} numberOfLines={1}>{especialidadeSelecionada}</Text>
+          <Feather name="chevron-down" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
         {lista.jaConsultou && catalogo.carregando && <Text style={styles.emptySub}>Carregando especialidades…</Text>}
         {!!catalogo.erro && (
           <View>
             <Text style={styles.emptySub} accessibilityLiveRegion="polite">Especialidades: {catalogo.erro}</Text>
-            <TouchableOpacity accessibilityRole="button" onPress={catalogo.repetir} style={styles.acaoBusca}>
-              <Text style={styles.botaoVoltarTexto}>Recarregar especialidades</Text>
-            </TouchableOpacity>
+            <Button variant="secondary" onPress={catalogo.repetir} style={styles.actionButton}>
+              Recarregar especialidades
+            </Button>
           </View>
         )}
       </View>
 
-      {/* Conteúdo */}
       {lista.carregando && (!filtros.atualizar || lista.dados.length === 0) ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0284C7" />
@@ -245,9 +233,7 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
       ) : lista.erro ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptySub} accessibilityLiveRegion="polite">{lista.erro}</Text>
-          <TouchableOpacity style={styles.botaoVerTodos} accessibilityRole="button" onPress={lista.repetir}>
-            <Text style={styles.botaoVerTodosTexto}>Tentar novamente</Text>
-          </TouchableOpacity>
+          <Button onPress={lista.repetir}>Tentar novamente</Button>
         </View>
       ) : (
         <FlatList
@@ -260,8 +246,8 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
             <RefreshControl
               refreshing={lista.carregando && filtros.atualizar}
               onRefresh={() => setFiltros(f => ({ ...f, atualizar: true }))}
-              colors={['#0284C7', '#0D9488']}
-              tintColor="#0284C7"
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           ListEmptyComponent={
@@ -272,58 +258,90 @@ function ConsultaDoPaciente({ nomeClinica, idClinica, onVoltar }) {
                 Nenhum resultado para os critérios atuais.
               </Text>
               {(clinica || filtros.busca || filtros.idEspecialidade != null) ? (
-                <TouchableOpacity
-                  style={styles.botaoVerTodos}
-                  accessibilityRole="button"
-                  onPress={limparFiltros}
-                >
-                  <Text style={styles.botaoVerTodosTexto}>Limpar filtros</Text>
-                </TouchableOpacity>
+                <Button variant="secondary" onPress={limparFiltros}>Limpar filtros</Button>
               ) : null}
             </View>
           }
         />
       )}
-    </SafeAreaView>
+      <Modal
+        visible={dropdownEspecialidadeAberto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownEspecialidadeAberto(false)}
+      >
+        <View style={styles.dropdownBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar seleção de especialidade"
+            onPress={() => setDropdownEspecialidadeAberto(false)}
+          />
+          <View style={styles.dropdownPanel}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>Selecione uma especialidade</Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Fechar"
+                onPress={() => setDropdownEspecialidadeAberto(false)}
+                style={styles.dropdownClose}
+              >
+                <Feather name="x" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={especialidades}
+              keyExtractor={item => String(item.id_especialidade ?? 'todas')}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                const selecionada = item.id_especialidade === filtros.idEspecialidade;
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: selecionada }}
+                    onPress={() => selecionarEspecialidade(item.id_especialidade)}
+                    style={[styles.dropdownOption, selecionada && styles.dropdownOptionSelected]}
+                  >
+                    <Text style={[
+                      styles.dropdownOptionText,
+                      selecionada && styles.dropdownOptionTextSelected,
+                    ]}>
+                      {item.nome}
+                    </Text>
+                    {selecionada ? <Feather name="check" size={18} color={colors.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.surfaceInput,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: colors.surfaceInput,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 10,
-    backgroundColor: '#F8FAFC',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  botaoVoltar: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  botaoVoltarTexto: {
-    fontSize: 14,
-    color: '#0284C7',
-    fontWeight: '700',
+    backgroundColor: colors.surfaceInput,
   },
   headerTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 14,
   },
+  actionButton: { marginBottom: 12 },
   filtroAtivoContainer: {
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
@@ -365,38 +383,84 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#64748B',
   },
-  rotuloEspecialidade: { marginTop: 10, marginBottom: 4, color: '#334155', fontWeight: '700' },
-  opcoes: { gap: 8, alignItems: 'center' },
-  opcao: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#E2E8F0' },
-  opcaoAtiva: { backgroundColor: '#075985' },
-  textoOpcaoAtiva: { color: '#FFFFFF' },
-  acaoBusca: { minHeight: 44, paddingHorizontal: 8, alignSelf: 'center', justifyContent: 'center' },
-  buscaContainer: {
-    marginTop: 6,
+  rotuloEspecialidade: { marginTop: 2, marginBottom: 8, color: colors.textSecondary, fontWeight: '700' },
+  dropdownTrigger: {
+    minHeight: 54,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surfaceInput,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    height: 44,
+    justifyContent: 'space-between',
   },
-  iconeBusca: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  inputBusca: {
+  dropdownTriggerText: {
     flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
+    marginRight: 12,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  dropdownDisabled: { opacity: 0.6 },
+  dropdownBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  dropdownPanel: {
+    maxHeight: '75%',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    elevation: 8,
+  },
+  dropdownHeader: {
+    minHeight: 44,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  dropdownClose: {
+    padding: 8,
+  },
+  dropdownOption: {
+    minHeight: 52,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: colors.primarySoft,
+  },
+  dropdownOptionText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  dropdownOptionTextSelected: {
+    fontWeight: '700',
+    color: colors.primary,
   },
   listContent: {
     paddingTop: 8,
     paddingBottom: 24,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 14,
     marginHorizontal: 16,
@@ -466,7 +530,7 @@ const styles = StyleSheet.create({
   clinicaText: {
     flexShrink: 1,
     fontSize: 12,
-    color: '#0284C7',
+    color: colors.primary,
     fontWeight: '500',
   },
   loadingContainer: {
@@ -478,7 +542,7 @@ const styles = StyleSheet.create({
   loadingTexto: {
     marginTop: 10,
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -500,16 +564,5 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 16,
-  },
-  botaoVerTodos: {
-    backgroundColor: '#0284C7',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  botaoVerTodosTexto: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

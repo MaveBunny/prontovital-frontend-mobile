@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 
@@ -107,12 +106,25 @@ async function lerJsonLocal(chave, padrao) {
   }
 }
 
-export async function listarEspecialidades({ apenasAtivas = false } = {}) {
+export async function listarProfissionais({ busca = '', idEspecialidade = null } = {}, signal) {
+  const params = {};
+  if (busca && busca.trim()) params.busca = busca.trim();
+  if (idEspecialidade != null) params.id_especialidade = idEspecialidade;
+  const { data } = await api.get('/profissionais', { params, signal });
+  if (!Array.isArray(data)) throw new Error('A API não devolveu uma lista.');
+  return data;
+}
+
+export async function listarEspecialidades(arg = {}) {
+  const isSignal = arg && typeof arg === 'object' && 'aborted' in arg;
+  const apenasAtivas = !isSignal && Boolean(arg?.apenasAtivas);
+  const signal = isSignal ? arg : undefined;
+
   const customizacoes = await lerJsonLocal(CATALOGO_ESP_STORAGE_KEY, {});
   let base = LISTA_ESPECIALIDADES_PADRAO;
 
   try {
-    const { data } = await api.get('/especialidades');
+    const { data } = await api.get('/especialidades', { signal });
     if (Array.isArray(data) && data.length > 0) {
       base = data.map((item) => {
         const padrao = LISTA_ESPECIALIDADES_PADRAO.find(
@@ -308,23 +320,4 @@ export async function cadastrarProfissionalAdmin(form) {
   }
 
   return criado;
-=======
-import api from './api';
-
-async function consultarLista(rota, params, signal) {
-  const { data } = await api.get(rota, { params, signal });
-  if (!Array.isArray(data)) throw new Error('A API não devolveu uma lista.');
-  return data;
-}
-
-export function listarEspecialidades(signal) {
-  return consultarLista('/especialidades', {}, signal);
-}
-
-export function listarProfissionais({ busca = '', idEspecialidade = null }, signal) {
-  const params = {};
-  if (busca.trim()) params.busca = busca.trim();
-  if (idEspecialidade != null) params.id_especialidade = idEspecialidade;
-  return consultarLista('/profissionais', params, signal);
->>>>>>> origin/main
 }
