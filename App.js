@@ -9,7 +9,6 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppHeader from './src/components/shared/AppHeader';
-import AdminLayout from './src/features/admin/components/AdminLayout';
 import AuthScreen from './src/features/auth/screens/AuthScreen';
 import ProfissionaisScreen from './src/features/auth/screens/ConsultarProfissionaisScreen';
 import ClinicasScreen from './src/screens/ClinicasScreen';
@@ -46,10 +45,8 @@ function RootNavigator() {
     if (!autenticado) {
       setTelaAtiva('Inicio');
       setParametrosRota({});
-    } else if (usuario?.perfil === 'admin') {
-      setTelaAtiva('Admin');
     }
-  }, [autenticado, usuario?.perfil]);
+  }, [autenticado]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -81,15 +78,6 @@ function RootNavigator() {
       <>
         <StatusBar style="light" backgroundColor={colors.brandDark} />
         <AuthScreen />
-      </>
-    );
-  }
-
-  if (telaAtiva === 'Admin') {
-    return (
-      <>
-        <StatusBar style="light" backgroundColor="#2563EB" />
-        <AdminLayout onVoltarPaciente={() => navegarPara('Inicio')} />
       </>
     );
   }
