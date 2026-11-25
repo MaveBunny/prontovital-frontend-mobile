@@ -39,46 +39,34 @@ export const profissionalService = {
     return data;
   },
 
-  async obterContagemPorClinica() {
-    try {
-      const { data: profissionais } = await api.get('/profissionais');
-      const contagem = {};
+  async obterResumoPorClinica() {
+    const { data: profissionais } = await api.get('/profissionais');
+    const resumo = {};
 
-      if (Array.isArray(profissionais)) {
-        profissionais.forEach((prof) => {
-          const nomeEspecialidade = prof.Especialidade?.nome;
-          if (Array.isArray(prof.Clinicas)) {
-            prof.Clinicas.forEach((c) => {
-              const id = c.id_clinica;
-              if (!resumo[id]) {
-                resumo[id] = { total: 0, especialidades: [] };
-              }
-              resumo[id].total += 1;
-              if (
-                nomeEspecialidade &&
-                !resumo[id].especialidades.includes(nomeEspecialidade)
-              ) {
-                resumo[id].especialidades.push(nomeEspecialidade);
-              }
-            });
-          }
-        });
-      }
-
-      return resumo;
-    } catch (error) {
-      console.warn(
-        "[API] Erro ao obter resumo de profissionais por clínica:",
-        error.message,
-      );
-      return {};
+    if (Array.isArray(profissionais)) {
+      profissionais.forEach((prof) => {
+        const nomeEspecialidade = prof.Especialidade?.nome;
+        if (Array.isArray(prof.Clinicas)) {
+          prof.Clinicas.forEach((c) => {
+            const id = c.id_clinica;
+            if (!resumo[id]) {
+              resumo[id] = { total: 0, especialidades: [] };
+            }
+            resumo[id].total += 1;
+            if (
+              nomeEspecialidade &&
+              !resumo[id].especialidades.includes(nomeEspecialidade)
+            ) {
+              resumo[id].especialidades.push(nomeEspecialidade);
+            }
+          });
+        }
+      });
     }
+
+    return resumo;
   },
 
-  /**
-   * Obtém apenas a contagem de profissionais por ID de clínica.
-   * Retorna um mapa { [id_clinica]: number }.
-   */
   async obterContagemPorClinica() {
     const resumo = await this.obterResumoPorClinica();
     const contagem = {};

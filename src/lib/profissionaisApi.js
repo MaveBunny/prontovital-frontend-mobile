@@ -115,6 +115,25 @@ export async function listarProfissionais({ busca = '', idEspecialidade = null }
   return data;
 }
 
+export async function consultarDisponibilidadeProfissional(idProfissional, data, signal) {
+  const { data: horarios } = await api.get(
+    `/profissionais/${idProfissional}/disponibilidade`,
+    { params: { data }, signal }
+  );
+  if (!Array.isArray(horarios)) {
+    throw new Error('A API não devolveu uma lista de horários.');
+  }
+  return horarios;
+}
+
+export async function criarAgendamentoProfissional(idProfissional, agendamento) {
+  const { data } = await api.post(
+    `/profissionais/${idProfissional}/agendamentos`,
+    agendamento
+  );
+  return data;
+}
+
 export async function listarEspecialidades(arg = {}) {
   const isSignal = arg && typeof arg === 'object' && 'aborted' in arg;
   const apenasAtivas = !isSignal && Boolean(arg?.apenasAtivas);
