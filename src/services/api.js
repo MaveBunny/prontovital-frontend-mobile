@@ -46,11 +46,12 @@ export const profissionalService = {
     if (Array.isArray(profissionais)) {
       profissionais.forEach((prof) => {
         const nomeEspecialidade = prof.Especialidade?.nome;
+        const nomeProfissional = prof.User?.nome;
         if (Array.isArray(prof.Clinicas)) {
           prof.Clinicas.forEach((c) => {
             const id = c.id_clinica;
             if (!resumo[id]) {
-              resumo[id] = { total: 0, especialidades: [] };
+              resumo[id] = { total: 0, especialidades: [], profissionais: [] };
             }
             resumo[id].total += 1;
             if (
@@ -58,6 +59,12 @@ export const profissionalService = {
               !resumo[id].especialidades.includes(nomeEspecialidade)
             ) {
               resumo[id].especialidades.push(nomeEspecialidade);
+            }
+            if (
+              nomeProfissional &&
+              !resumo[id].profissionais.includes(nomeProfissional)
+            ) {
+              resumo[id].profissionais.push(nomeProfissional);
             }
           });
         }

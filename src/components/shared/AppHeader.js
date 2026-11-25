@@ -15,21 +15,32 @@ import { colors } from "../../shared/theme/colors";
 
 const MENU_ITEMS = [
   { key: "Inicio", label: "Início", icon: "home-outline" },
+  {
+    key: "AdminAgendamentos",
+    label: "Agendamentos",
+    icon: "calendar-outline",
+    adminOnly: true,
+  },
   { key: "Clinicas", label: "Clínicas", icon: "business-outline" },
   { key: "Profissionais", label: "Profissionais", icon: "people-outline" },
   {
-    key: "CadastroProfissional",
-    label: "Cadastrar profissional",
-    icon: "person-add-outline",
-    adminOnly: true,
+    key: "Agendamentos",
+    label: "Meus Agendamentos",
+    icon: "calendar-outline",
+    pacienteOnly: true,
   },
-  { key: "Agendamentos", label: "Meus Agendamentos", icon: "calendar-outline" },
   {
     key: "HistoricoTriagens",
     label: "Histórico de Triagens",
     icon: "list-outline",
+    pacienteOnly: true,
   },
-  { key: "Perfil", label: "Meu Perfil", icon: "person-outline" },
+  {
+    key: "Perfil",
+    label: "Meu Perfil",
+    icon: "person-outline",
+    pacienteOnly: true,
+  },
 ];
 
 export default function AppHeader({ telaAtiva, onNavigate }) {
@@ -128,7 +139,11 @@ export default function AppHeader({ telaAtiva, onNavigate }) {
 
             {/* Lista de Abas */}
             <View style={styles.navList}>
-              {MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+              {MENU_ITEMS.filter(
+                (item) =>
+                  (!item.adminOnly || isAdmin) &&
+                  (!item.pacienteOnly || !isAdmin)
+              ).map((item) => {
                 const ativo = telaAtiva === item.key;
                 return (
                   <TouchableOpacity
