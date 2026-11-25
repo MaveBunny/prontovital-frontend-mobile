@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,36 +6,29 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   RefreshControl,
   Keyboard,
-  Platform,
-} from 'react-native';
-import ClinicaCard from '../components/ClinicaCard';
-import { LogoProntoVital, IconeMenu, IconeLupa } from '../components/Icons';
-import { clinicaService, profissionalService } from '../services/api';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AppHeader from "../components/shared/AppHeader";
+import ClinicaCard from "../components/ClinicaCard";
+import { clinicaService, profissionalService } from "../services/api";
 
 /**
  * Tela de Consulta de Clínicas do ProntoVital.
- * Visual 100% fiel ao protótipo, consumindo exclusivamente a API REST.
+ * Utiliza o AppHeader padrão com menu sanduíche funcional e consome dados reais do backend.
  */
 export default function ClinicasScreen({
   navigation,
   onNavigateToProfissionais,
-  onLogout,
 }) {
   const [clinicas, setClinicas] = useState([]);
-  const [contagemProfissionais, setContagemProfissionais] = useState({});
-  const [termoBusca, setTermoBusca] = useState('');
+  const [resumoPorClinica, setResumoPorClinica] = useState({});
+  const [termoBusca, setTermoBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
 
-  /**
-   * Consulta a API REST local (prontovital-api).
-   */
-  const carregarDados = useCallback(async (termo = '', isRefresh = false) => {
+  const carregarDados = useCallback(async (termo = "", isRefresh = false) => {
     try {
       if (isRefresh) {
         setAtualizando(true);
@@ -43,18 +36,17 @@ export default function ClinicasScreen({
         setCarregando(true);
       }
 
-      const [listaClinicas, mapaContagem] = await Promise.all([
+      const [listaClinicas, mapaResumo] = await Promise.all([
         clinicaService.listar(termo),
-        profissionalService.obterContagemPorClinica(),
+        profissionalService.obterResumoPorClinica(),
       ]);
 
       setClinicas(Array.isArray(listaClinicas) ? listaClinicas : []);
-      if (mapaContagem) {
-        setContagemProfissionais(mapaContagem);
+      if (mapaResumo) {
+        setResumoPorClinica(mapaResumo);
       }
     } catch (err) {
-      console.warn('[ClinicasScreen] Falha ao consultar API:', err.message);
-      // Mantém array vazio em caso de erro sem dados mockados
+      console.warn("[ClinicasScreen] Falha ao consultar API:", err.message);
       setClinicas([]);
     } finally {
       setCarregando(false);
@@ -70,17 +62,14 @@ export default function ClinicasScreen({
     carregarDados(termoBusca, true);
   }, [carregarDados, termoBusca]);
 
-  /**
-   * Filtro dinâmico por nome da clínica ou bairro.
-   */
   const clinicasFiltradas = useMemo(() => {
     if (!termoBusca.trim()) {
       return clinicas;
     }
     const termo = termoBusca.trim().toLowerCase();
     return clinicas.filter((item) => {
-      const nome = item.User?.nome?.toLowerCase() || '';
-      const bairro = item.bairro?.toLowerCase() || '';
+      const nome = item.User?.nome?.toLowerCase() || "";
+      const bairro = item.bairro?.toLowerCase() || "";
       return nome.includes(termo) || bairro.includes(termo);
     });
   }, [clinicas, termoBusca]);
@@ -90,11 +79,8 @@ export default function ClinicasScreen({
     carregarDados(termoBusca);
   };
 
-  /**
-   * Navega para profissionais com o filtro da clínica.
-   */
   const handleVerProfissionais = (clinica) => {
-    const nomeClinica = clinica.User?.nome || '';
+    const nomeClinica = clinica.User?.nome || "";
 
     if (onNavigateToProfissionais) {
       onNavigateToProfissionais({
@@ -104,8 +90,8 @@ export default function ClinicasScreen({
       return;
     }
 
-    if (navigation && typeof navigation.navigate === 'function') {
-      navigation.navigate('Profissionais', {
+    if (navigation && typeof navigation.navigate === "function") {
+      navigation.navigate("Profissionais", {
         clinicaNome: nomeClinica,
         idClinica: clinica.id_clinica,
       });
@@ -113,48 +99,21 @@ export default function ClinicasScreen({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={styles.container}>
+      <AppHeader
+        telaAtiva="Clinicas"
+        onNavigate={(rota) => navigation?.navigate?.(rota)}
+      />
 
-      {/* Topo / Header Branco com Logo e Menu */}
-      <View style={styles.headerContainer}>
-        <LogoProntoVital />
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.menuBotao}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Menu"
-          >
-            <IconeMenu color="#334155" />
-          </TouchableOpacity>
-          {onLogout ? (
-            <TouchableOpacity
-              style={styles.logoutBotao}
-              activeOpacity={0.7}
-              onPress={onLogout}
-              accessibilityRole="button"
-              accessibilityLabel="Sair da conta"
-            >
-              <Text style={styles.logoutTexto}>Sair</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-
-      {/* Corpo da Tela com Fundo Claro */}
       <View style={styles.corpo}>
-        {/* Título Principal "Clínicas" */}
         <Text style={styles.titulo}>Clínicas</Text>
-
-        {/* Subtítulo idêntico ao protótipo */}
         <Text style={styles.subtitulo}>
-          Selecione uma clínica para ver os profissionais disponíveis e agendar sua consulta.
+          Selecione uma clínica para ver os profissionais disponíveis e agendar
+          sua consulta.
         </Text>
 
-        {/* Input de Busca com Placeholder "Buscar por nome ou bairro..." */}
         <View style={styles.buscaContainer}>
-          <IconeLupa size={15} color="#94A3B8" />
+          <Ionicons name="search-outline" size={18} color="#94A3B8" />
           <TextInput
             style={styles.inputBusca}
             placeholder="Buscar por nome ou bairro..."
@@ -168,10 +127,6 @@ export default function ClinicasScreen({
           />
         </View>
 
-        {/* 
-          Listagem com FlatList consumindo dados reais da API.
-          Exibe loading durante a requisição e fica em branco quando não há clínicas cadastradas.
-        */}
         {carregando && !atualizando ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2563EB" />
@@ -180,19 +135,26 @@ export default function ClinicasScreen({
           <FlatList
             data={clinicasFiltradas}
             keyExtractor={(item) => String(item.id_clinica)}
-            renderItem={({ item }) => (
-              <ClinicaCard
-                clinica={item}
-                totalProfissionais={contagemProfissionais[item.id_clinica] || 0}
-                onVerProfissionais={handleVerProfissionais}
-              />
-            )}
+            renderItem={({ item }) => {
+              const resumo = resumoPorClinica[item.id_clinica] || {
+                total: 0,
+                especialidades: [],
+              };
+              return (
+                <ClinicaCard
+                  clinica={item}
+                  totalProfissionais={resumo.total}
+                  especialidades={resumo.especialidades}
+                  onVerProfissionais={handleVerProfissionais}
+                />
+              );
+            }}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyCard}>
                 <View style={styles.emptyIconCircle}>
-                  <IconeLupa size={22} color="#64748B" />
+                  <Ionicons name="search-outline" size={24} color="#64748B" />
                 </View>
                 <Text style={styles.emptyTitle}>Nenhuma clínica encontrada</Text>
                 <Text style={styles.emptySubtitle}>
@@ -204,78 +166,48 @@ export default function ClinicasScreen({
               <RefreshControl
                 refreshing={atualizando}
                 onRefresh={onRefresh}
-                colors={['#2563EB']}
+                colors={["#2563EB"]}
                 tintColor="#2563EB"
               />
             }
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
-  },
-  headerContainer: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  menuBotao: {
-    padding: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoutBotao: {
-    marginLeft: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  logoutTexto: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '700',
+    backgroundColor: "#F8FAFC",
   },
   corpo: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Fundo claro da página
+    backgroundColor: "#F8FAFC",
   },
   titulo: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: "800",
+    color: "#0F172A",
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 6,
   },
   subtitulo: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#64748B",
     lineHeight: 20,
     paddingHorizontal: 16,
     paddingBottom: 18,
   },
   buscaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     paddingHorizontal: 14,
     height: 48,
     marginHorizontal: 16,
@@ -284,7 +216,7 @@ const styles = StyleSheet.create({
   inputBusca: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: "#0F172A",
     marginLeft: 10,
     paddingVertical: 0,
   },
@@ -294,39 +226,39 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EDF2F7',
+    borderColor: "#EDF2F7",
     marginHorizontal: 16,
     paddingVertical: 44,
     paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyIconCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 13,
-    color: '#94A3B8',
-    textAlign: 'center',
+    color: "#94A3B8",
+    textAlign: "center",
   },
 });
