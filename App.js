@@ -13,6 +13,7 @@ import { colors } from "./src/shared/theme/colors";
 import HomeScreen from "./src/screens/HomeScreen";
 import ClinicasScreen from "./src/screens/ClinicasScreen";
 import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
+import CadastroProfissionalScreen from "./src/features/profissionais/screens/CadastroProfissionalScreen";
 import AppHeader from "./src/components/shared/AppHeader";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -110,6 +111,14 @@ function RootNavigator() {
             filtroInicialClinica={parametrosRota?.clinicaNome || ""}
             route={{ params: parametrosRota }}
             onVoltar={() => navegarPara("Inicio")}
+          />
+        );
+
+      case "CadastroProfissional":
+        return (
+          <CadastroProfissionalScreen
+            navigation={navigation}
+            onSuccess={() => navegarPara("Inicio")}
           />
         );
 
