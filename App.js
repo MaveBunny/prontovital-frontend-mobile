@@ -13,6 +13,7 @@ import AdminLayout from './src/features/admin/components/AdminLayout';
 import AuthScreen from './src/features/auth/screens/AuthScreen';
 import ClinicasScreen from './src/screens/ClinicasScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import PerfilScreen from './src/screens/PerfilScreen';
 import ProfissionaisScreen from './src/screens/ProfissionaisScreen';
 import { AuthProvider, useAuth } from './src/shared/context/AuthContext';
 import { colors } from './src/shared/theme/colors';
@@ -143,13 +144,7 @@ function RootNavigator() {
         );
 
       case 'Perfil':
-        return (
-          <TelaEmConstrucao
-            titulo="Meu Perfil"
-            telaAtiva="Perfil"
-            navegarPara={navegarPara}
-          />
-        );
+        return <PerfilScreen navigation={navigation} />;
 
       default:
         return <HomeScreen navigation={navigation} />;
