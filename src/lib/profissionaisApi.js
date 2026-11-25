@@ -321,3 +321,22 @@ export async function cadastrarProfissionalAdmin(form) {
 
   return criado;
 }
+
+export async function cadastrarProfissional(payload) {
+  const { data } = await api.post('/usuarios', payload);
+  return data;
+}
+
+export async function vincularEspecialidadeProfissional(idProfissional, idEspecialidade) {
+  const { data } = await api.patch(
+    `/profissionais/${idProfissional}/especialidade/${idEspecialidade}`
+  );
+  return data;
+}
+
+export async function vincularProfissionalClinica(idClinica, idProfissional) {
+  const { data } = await api.patch(
+    `/clinicas/${idClinica}/profissionais/${idProfissional}`
+  );
+  return data;
+}

@@ -62,13 +62,15 @@ export default function ProfissionaisScreen({
     return () => evento.remove();
   }, [voltar]);
 
-  const paciente = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase() === 'paciente';
-  if (!paciente) {
+  const perfil = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase();
+  const paciente = perfil === 'paciente';
+  const administrador = perfil === 'admin';
+  if (!paciente && !administrador) {
     return (
       <View style={styles.safeArea}>
         <AppHeader telaAtiva="Profissionais" onNavigate={navegarPara} />
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Esta consulta é destinada ao paciente.</Text>
+          <Text style={styles.emptyTitle}>Esta consulta é destinada a pacientes e administradores.</Text>
           <Button variant="secondary" onPress={voltar}>Voltar para clínicas</Button>
         </View>
       </View>
@@ -84,12 +86,19 @@ export default function ProfissionaisScreen({
         key={JSON.stringify([id, nome])}
         nomeClinica={nome}
         idClinica={id}
+        mostrarBotaoNovoProfissional={administrador}
+        onNovoProfissional={() => navegarPara('CadastroProfissional')}
       />
     </View>
   );
 }
 
-function ConsultaDoPaciente({ nomeClinica, idClinica }) {
+function ConsultaDoPaciente({
+  nomeClinica,
+  idClinica,
+  mostrarBotaoNovoProfissional,
+  onNovoProfissional,
+}) {
   const [clinica, setClinica] = useState((nomeClinica || idClinica != null) ? { nome: nomeClinica, id: idClinica } : null);
   const [termoBusca, setTermoBusca] = useState('');
   const [dropdownEspecialidadeAberto, setDropdownEspecialidadeAberto] = useState(false);
@@ -169,6 +178,15 @@ function ConsultaDoPaciente({ nomeClinica, idClinica }) {
     <View style={styles.content}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.headerTitulo}>Consultar profissionais</Text>
+        {mostrarBotaoNovoProfissional ? (
+          <Button
+            leftIcon="plus"
+            onPress={onNovoProfissional}
+            style={styles.newProfessionalButton}
+          >
+            Novo Profissional
+          </Button>
+        ) : null}
 
         {clinica ? (
           <View style={styles.filtroAtivoContainer}>
@@ -341,6 +359,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 14,
   },
+  newProfessionalButton: { marginBottom: 12 },
   actionButton: { marginBottom: 12 },
   filtroAtivoContainer: {
     backgroundColor: '#F0F9FF',

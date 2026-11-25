@@ -17,6 +17,12 @@ const MENU_ITEMS = [
   { key: "Inicio", label: "Início", icon: "home-outline" },
   { key: "Clinicas", label: "Clínicas", icon: "business-outline" },
   { key: "Profissionais", label: "Profissionais", icon: "people-outline" },
+  {
+    key: "CadastroProfissional",
+    label: "Cadastrar profissional",
+    icon: "person-add-outline",
+    adminOnly: true,
+  },
   { key: "Agendamentos", label: "Meus Agendamentos", icon: "calendar-outline" },
   {
     key: "HistoricoTriagens",
@@ -31,6 +37,7 @@ export default function AppHeader({ telaAtiva, onNavigate }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const { usuario, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const isAdmin = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase() === 'admin';
 
   const nomeExibicao = usuario?.nome || "Usuário";
   const inicial = nomeExibicao.charAt(0).toUpperCase();
@@ -122,7 +129,7 @@ export default function AppHeader({ telaAtiva, onNavigate }) {
 
             {/* Lista de Abas */}
             <View style={styles.navList}>
-              {MENU_ITEMS.map((item) => {
+              {MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
                 const ativo = telaAtiva === item.key;
                 return (
                   <TouchableOpacity
