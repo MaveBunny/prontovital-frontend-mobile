@@ -5,15 +5,19 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setOnUnauthorized } from "../../lib/api";
 import {
   carregarSessaoSalva,
   login as loginService,
   logout as logoutService,
+  USER_STORAGE_KEY,
 } from "../../lib/authService";
 import { registrarPushNotification } from "../../lib/pushNotificationService";
 
 export const AuthContext = createContext(null);
+
+const STORAGE_KEY_FALLBACK = USER_STORAGE_KEY || "@prontovital:user";
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
@@ -54,9 +58,37 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const atualizarUsuarioLocal = useCallback(async (novosDados) => {
+    let usuarioAtualizado = null;
+
+    setUsuario((prev) => {
+      usuarioAtualizado = { ...(prev || {}), ...novosDados };
+      return usuarioAtualizado;
+    });
+
+    if (usuarioAtualizado && typeof STORAGE_KEY_FALLBACK === "string") {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEY_FALLBACK,
+          JSON.stringify(usuarioAtualizado),
+        );
+      } catch (e) {
+        console.warn("Não foi possível salvar usuário no storage:", e?.message);
+      }
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ usuario, autenticado, inicializando, carregando, login, logout }}
+      value={{
+        usuario,
+        autenticado,
+        inicializando,
+        carregando,
+        login,
+        logout,
+        atualizarUsuarioLocal,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -23,7 +23,7 @@ const MENU_ITEMS = [
   { id: 'agendamentos', label: 'Agendamentos', icon: 'calendar' },
 ];
 
-export default function AdminLayout() {
+export default function AdminLayout({ onVoltarPaciente }) {
   const { usuario, logout } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState('profissionais');
   const [menuAberto, setMenuAberto] = useState(false);
@@ -112,6 +112,20 @@ export default function AdminLayout() {
                     </TouchableOpacity>
                   );
                 })}
+
+                {onVoltarPaciente ? (
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      setMenuAberto(false);
+                      onVoltarPaciente();
+                    }}
+                    style={styles.navItem}
+                  >
+                    <Feather name="arrow-left-circle" size={19} color="#64748B" />
+                    <Text style={styles.navLabel}>Início (Paciente)</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </View>
 

@@ -32,6 +32,11 @@ const QUICK_ACTIONS = [
     label: "Hist. Triagens",
     icon: "list-outline",
   },
+  {
+    key: "Admin",
+    label: "Gestão de Profissionais e Especialidades (Admin)",
+    icon: "medkit-outline",
+  },
 ];
 
 export default function HomeScreen({ navigation }) {

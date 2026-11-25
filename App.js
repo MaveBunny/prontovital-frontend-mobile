@@ -31,8 +31,8 @@ function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
   );
 }
 
-function PacienteNavigator() {
-  const { logout } = useAuth();
+function RootNavigator() {
+  const { autenticado, inicializando, usuario, logout } = useAuth();
   const [telaAtiva, setTelaAtiva] = useState('Inicio');
   const [parametrosRota, setParametrosRota] = useState({});
 
@@ -42,66 +42,36 @@ function PacienteNavigator() {
   };
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (telaAtiva !== 'Inicio') {
-        navegarPara('Inicio');
-        return true;
+    if (!autenticado) {
+      setTelaAtiva('Inicio');
+      setParametrosRota({});
+    } else if (usuario?.perfil === 'admin') {
+      setTelaAtiva('Admin');
+    }
+  }, [autenticado, usuario?.perfil]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (autenticado && telaAtiva !== 'Inicio') {
+          navegarPara('Inicio');
+          return true;
+        }
+        return false;
       }
-      return false;
-    });
+    );
     return () => subscription.remove();
-  }, [telaAtiva]);
-
-  const navigation = {
-    navigate: (nomeTela, params) => navegarPara(nomeTela, params),
-    goBack: () => navegarPara('Inicio'),
-  };
-
-  const telas = {
-    Inicio: <HomeScreen navigation={navigation} />,
-    Clinicas: (
-      <ClinicasScreen
-        navigation={navigation}
-        onNavigateToProfissionais={(params) => navegarPara('Profissionais', params)}
-        onLogout={logout}
-      />
-    ),
-    Profissionais: (
-      <ProfissionaisScreen
-        navigation={navigation}
-        filtroInicialClinica={parametrosRota?.clinicaNome || ''}
-        route={{ params: parametrosRota }}
-        onVoltar={() => navegarPara('Inicio')}
-      />
-    ),
-    Agendamentos: (
-      <TelaEmConstrucao titulo="Meus Agendamentos" telaAtiva="Agendamentos" navegarPara={navegarPara} />
-    ),
-    HistoricoTriagens: (
-      <TelaEmConstrucao titulo="Histórico de Triagens" telaAtiva="HistoricoTriagens" navegarPara={navegarPara} />
-    ),
-    Perfil: (
-      <TelaEmConstrucao titulo="Meu Perfil" telaAtiva="Perfil" navegarPara={navegarPara} />
-    ),
-  };
-
-  return (
-    <View style={styles.container}>
-      <StatusBar style="dark" backgroundColor="#FFFFFF" />
-      {telas[telaAtiva] || telas.Inicio}
-    </View>
-  );
-}
-
-function RootNavigator() {
-  const { autenticado, inicializando, usuario } = useAuth();
+  }, [autenticado, telaAtiva]);
 
   if (inicializando) {
     return (
-      <View style={styles.loadingScreen}>
+      <>
         <StatusBar style="light" backgroundColor={colors.brandDark} />
-        <ActivityIndicator size="large" color={colors.brandAccent} />
-      </View>
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator size="large" color={colors.brandAccent} />
+        </View>
+      </>
     );
   }
 
@@ -114,16 +84,84 @@ function RootNavigator() {
     );
   }
 
-  if (usuario?.perfil === 'admin') {
+  if (telaAtiva === 'Admin') {
     return (
       <>
         <StatusBar style="light" backgroundColor="#2563EB" />
-        <AdminLayout />
+        <AdminLayout onVoltarPaciente={() => navegarPara('Inicio')} />
       </>
     );
   }
 
-  return <PacienteNavigator />;
+  const navigation = {
+    navigate: (nomeTela, params) => navegarPara(nomeTela, params),
+    goBack: () => navegarPara('Inicio'),
+  };
+
+  const renderizarTela = () => {
+    switch (telaAtiva) {
+      case 'Inicio':
+        return <HomeScreen navigation={navigation} />;
+
+      case 'Clinicas':
+        return (
+          <ClinicasScreen
+            navigation={navigation}
+            onNavigateToProfissionais={(params) =>
+              navegarPara('Profissionais', params)
+            }
+            onLogout={logout}
+          />
+        );
+
+      case 'Profissionais':
+        return (
+          <ProfissionaisScreen
+            navigation={navigation}
+            filtroInicialClinica={parametrosRota?.clinicaNome || ''}
+            route={{ params: parametrosRota }}
+            onVoltar={() => navegarPara('Inicio')}
+          />
+        );
+
+      case 'Agendamentos':
+        return (
+          <TelaEmConstrucao
+            titulo="Meus Agendamentos"
+            telaAtiva="Agendamentos"
+            navegarPara={navegarPara}
+          />
+        );
+
+      case 'HistoricoTriagens':
+        return (
+          <TelaEmConstrucao
+            titulo="Histórico de Triagens"
+            telaAtiva="HistoricoTriagens"
+            navegarPara={navegarPara}
+          />
+        );
+
+      case 'Perfil':
+        return (
+          <TelaEmConstrucao
+            titulo="Meu Perfil"
+            telaAtiva="Perfil"
+            navegarPara={navegarPara}
+          />
+        );
+
+      default:
+        return <HomeScreen navigation={navigation} />;
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" backgroundColor="#FFFFFF" />
+      {renderizarTela()}
+    </View>
+  );
 }
 
 export default function App() {
@@ -137,14 +175,31 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surfaceInput },
+  container: {
+    flex: 1,
+    backgroundColor: colors.surfaceInput,
+  },
   loadingScreen: {
     flex: 1,
     backgroundColor: colors.brandDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholderContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  placeholderTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 8 },
-  placeholderSubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  placeholderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  placeholderTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  placeholderSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
 });
