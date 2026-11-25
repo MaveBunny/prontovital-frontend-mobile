@@ -30,6 +30,7 @@ const MENU_ITEMS = [
     icon: "list-outline",
   },
   { key: "Perfil", label: "Meu Perfil", icon: "person-outline" },
+  { key: "Admin", label: "Painel Admin (Profissionais)", icon: "medkit-outline" },
 ];
 
 export default function AppHeader({ telaAtiva, onNavigate }) {

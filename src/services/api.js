@@ -1,147 +1,47 @@
-import { Platform, NativeModules } from 'react-native';
+import api, { setMemoryToken } from '../lib/api';
 
-/**
- * Descobre automaticamente o IP do host que está servindo o bundle do Expo (ideal para Expo Go no celular).
- */
-function getDevHost() {
-  const scriptURL = NativeModules?.SourceCode?.scriptURL;
-  if (scriptURL) {
-    const match = scriptURL.match(/^https?:\/\/([^/:]+)/);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-  return null;
-}
-
-const detectedHost = getDevHost();
-
-/**
- * CONFIGURAÇÃO DA BASE URL DA API REST (prontovital-api)
- *
- * - Expo Go (dispositivo físico): detecta automaticamente o IP da máquina na rede Wi-Fi (ex: 192.168.1.4:3000)
- * - Emulador Android: 'http://10.0.2.2:3000'
- * - Simulador iOS / Navegador Web: 'http://localhost:3000'
- */
-const DEFAULT_API_URL = detectedHost
-  ? `http://${detectedHost}:3000`
-  : Platform.select({
-      android: 'http://10.0.2.2:3000',
-      ios: 'http://localhost:3000',
-      default: 'http://localhost:3000',
-    });
-
-// Permite customizar dinamicamente se necessário
-let currentBaseUrl = DEFAULT_API_URL;
-let currentAuthToken = null;
+let currentBaseUrl = api.defaults.baseURL;
 
 export const setApiBaseUrl = (url) => {
-  if (url) currentBaseUrl = url;
+  if (url) {
+    currentBaseUrl = url;
+    api.defaults.baseURL = url;
+  }
 };
 
 export const getApiBaseUrl = () => currentBaseUrl;
 
 export const setAuthToken = (token) => {
-  currentAuthToken = token;
+  setMemoryToken(token);
 };
 
-export const getAuthToken = () => currentAuthToken;
+export const getAuthToken = () => null;
 
-/**
- * Cliente HTTP centralizado utilizando Fetch API nativa do React Native.
- */
-async function request(endpoint, options = {}) {
-  const url = `${currentBaseUrl}${endpoint}`;
-  
-  const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
-
-  if (currentAuthToken) {
-    headers['Authorization'] = `Bearer ${currentAuthToken}`;
-  }
-
-  const config = {
-    ...options,
-    headers,
-  };
-
-  try {
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      let errorData = null;
-      try {
-        errorData = await response.json();
-      } catch (_) {
-        errorData = { message: response.statusText || 'Erro na requisição' };
-      }
-      const error = new Error(errorData?.erro || errorData?.message || `HTTP ${response.status}`);
-      error.status = response.status;
-      error.data = errorData;
-      throw error;
-    }
-
-    // Se resposta vazia (204)
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
-  } catch (err) {
-    console.warn(`[API] Falha ao chamar ${endpoint}:`, err.message);
-    throw err;
-  }
-}
-
-/**
- * Serviços de Clínicas
- */
 export const clinicaService = {
-  /**
-   * Consulta clínicas com filtro opcional por busca (nome da clínica ou bairro)
-   * GET /clinicas?busca=...
-   */
   async listar(busca = '') {
-    const query = busca?.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : '';
-    return await request(`/clinicas${query}`);
+    const params = busca?.trim() ? { busca: busca.trim() } : {};
+    const { data } = await api.get('/clinicas', { params });
+    return data;
   },
 
-  /**
-   * Consulta clínica específica por ID
-   * GET /clinicas/:id_clinica
-   */
   async obterPorId(idClinica) {
-    return await request(`/clinicas/${idClinica}`);
+    const { data } = await api.get(`/clinicas/${idClinica}`);
+    return data;
   },
 };
 
-/**
- * Serviços de Profissionais
- */
 export const profissionalService = {
-  /**
-   * Consulta profissionais com filtros opcionais
-   * GET /profissionais?busca=...&id_especialidade=...
-   */
   async listar({ busca = '', idEspecialidade = '' } = {}) {
-    const params = new URLSearchParams();
-    if (busca?.trim()) params.append('busca', busca.trim());
-    if (idEspecialidade) params.append('id_especialidade', idEspecialidade);
-    
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return await request(`/profissionais${queryString}`);
+    const params = {};
+    if (busca?.trim()) params.busca = busca.trim();
+    if (idEspecialidade) params.id_especialidade = idEspecialidade;
+    const { data } = await api.get('/profissionais', { params });
+    return data;
   },
 
-  /**
-   * Obtém a contagem real de profissionais vinculados por ID de clínica.
-   * Retorna um mapa { [id_clinica]: count }
-   */
   async obterContagemPorClinica() {
     try {
-      const profissionais = await request('/profissionais');
+      const { data: profissionais } = await api.get('/profissionais');
       const contagem = {};
 
       if (Array.isArray(profissionais)) {
@@ -156,8 +56,7 @@ export const profissionalService = {
       }
 
       return contagem;
-    } catch (error) {
-      console.warn('[API] Erro ao obter contagem de profissionais por clínica:', error.message);
+    } catch {
       return {};
     }
   },

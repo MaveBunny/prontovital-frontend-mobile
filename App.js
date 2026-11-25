@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { StatusBar } from "expo-status-bar";
-import AuthScreen from "./src/features/auth/screens/AuthScreen";
-import { AuthProvider, useAuth } from "./src/shared/context/AuthContext";
-import { colors } from "./src/shared/theme/colors";
-import HomeScreen from "./src/screens/HomeScreen";
-import ClinicasScreen from "./src/screens/ClinicasScreen";
-import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
-import CadastroProfissionalScreen from "./src/features/profissionais/screens/CadastroProfissionalScreen";
-import AppHeader from "./src/components/shared/AppHeader";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppHeader from './src/components/shared/AppHeader';
+import AdminLayout from './src/features/admin/components/AdminLayout';
+import AuthScreen from './src/features/auth/screens/AuthScreen';
+import ProfissionaisScreen from './src/features/auth/screens/ConsultarProfissionaisScreen';
+import ClinicasScreen from './src/screens/ClinicasScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import PerfilScreen from './src/screens/PerfilScreen';
+import { AuthProvider, useAuth } from './src/shared/context/AuthContext';
+import { colors } from './src/shared/theme/colors';
 
 function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
   return (
@@ -32,8 +33,8 @@ function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
 }
 
 function RootNavigator() {
-  const { autenticado, inicializando, logout } = useAuth();
-  const [telaAtiva, setTelaAtiva] = useState("Inicio");
+  const { autenticado, inicializando, usuario, logout } = useAuth();
+  const [telaAtiva, setTelaAtiva] = useState('Inicio');
   const [parametrosRota, setParametrosRota] = useState({});
 
   const navegarPara = (nomeTela, params = {}) => {
@@ -43,22 +44,23 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!autenticado) {
-      setTelaAtiva("Inicio");
+      setTelaAtiva('Inicio');
       setParametrosRota({});
+    } else if (usuario?.perfil === 'admin') {
+      setTelaAtiva('Admin');
     }
-  }, [autenticado]);
+  }, [autenticado, usuario?.perfil]);
 
-  // Faz o botão físico "Voltar" do Android retornar para o Início em vez de fechar o app
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
+      'hardwareBackPress',
       () => {
-        if (autenticado && telaAtiva !== "Inicio") {
-          navegarPara("Inicio");
+        if (autenticado && telaAtiva !== 'Inicio') {
+          navegarPara('Inicio');
           return true;
         }
         return false;
-      },
+      }
     );
     return () => subscription.remove();
   }, [autenticado, telaAtiva]);
@@ -83,46 +85,47 @@ function RootNavigator() {
     );
   }
 
+  if (telaAtiva === 'Admin') {
+    return (
+      <>
+        <StatusBar style="light" backgroundColor="#2563EB" />
+        <AdminLayout onVoltarPaciente={() => navegarPara('Inicio')} />
+      </>
+    );
+  }
+
   const navigation = {
     navigate: (nomeTela, params) => navegarPara(nomeTela, params),
-    goBack: () => navegarPara("Inicio"),
+    goBack: () => navegarPara('Inicio'),
   };
 
   const renderizarTela = () => {
     switch (telaAtiva) {
-      case "Inicio":
+      case 'Inicio':
         return <HomeScreen navigation={navigation} />;
 
-      case "Clinicas":
+      case 'Clinicas':
         return (
           <ClinicasScreen
             navigation={navigation}
             onNavigateToProfissionais={(params) =>
-              navegarPara("Profissionais", params)
+              navegarPara('Profissionais', params)
             }
             onLogout={logout}
           />
         );
 
-      case "Profissionais":
+      case 'Profissionais':
         return (
           <ProfissionaisScreen
             navigation={navigation}
-            filtroInicialClinica={parametrosRota?.clinicaNome || ""}
+            filtroInicialClinica={parametrosRota?.clinicaNome || ''}
             route={{ params: parametrosRota }}
-            onVoltar={() => navegarPara("Inicio")}
+            onVoltar={() => navegarPara('Inicio')}
           />
         );
 
-      case "CadastroProfissional":
-        return (
-          <CadastroProfissionalScreen
-            navigation={navigation}
-            onSuccess={() => navegarPara("Inicio")}
-          />
-        );
-
-      case "Agendamentos":
+      case 'Agendamentos':
         return (
           <TelaEmConstrucao
             titulo="Meus Agendamentos"
@@ -131,7 +134,7 @@ function RootNavigator() {
           />
         );
 
-      case "HistoricoTriagens":
+      case 'HistoricoTriagens':
         return (
           <TelaEmConstrucao
             titulo="Histórico de Triagens"
@@ -140,14 +143,8 @@ function RootNavigator() {
           />
         );
 
-      case "Perfil":
-        return (
-          <TelaEmConstrucao
-            titulo="Meu Perfil"
-            telaAtiva="Perfil"
-            navegarPara={navegarPara}
-          />
-        );
+      case 'Perfil':
+        return <PerfilScreen navigation={navigation} />;
 
       default:
         return <HomeScreen navigation={navigation} />;
@@ -180,24 +177,24 @@ const styles = StyleSheet.create({
   loadingScreen: {
     flex: 1,
     backgroundColor: colors.brandDark,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   placeholderContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
   },
   placeholderTitle: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
   },
   placeholderSubtitle: {
     fontSize: 14,
     color: colors.textMuted,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });
