@@ -15,6 +15,7 @@ export default function ClinicaCard({
   clinica,
   totalProfissionais = 0,
   especialidades = [],
+  nomesProfissionais = [],
   onVerProfissionais,
 }) {
   const nomeClinica = clinica.User?.nome || "Clínica";
@@ -74,6 +75,16 @@ export default function ClinicaCard({
                   <Text style={styles.badgeText}>{esp}</Text>
                 </View>
               ))}
+            </View>
+          ) : null}
+
+          {Array.isArray(nomesProfissionais) &&
+          nomesProfissionais.length > 0 ? (
+            <View style={styles.profissionaisRow}>
+              <Ionicons name="people-outline" size={13} color="#475569" />
+              <Text style={styles.profissionaisNomesText} numberOfLines={2}>
+                {nomesProfissionais.join(", ")}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -157,6 +168,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#0D9488",
+  },
+  profissionaisRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  profissionaisNomesText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#334155",
   },
   footerRow: {
     flexDirection: "row",

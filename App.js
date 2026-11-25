@@ -9,6 +9,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppHeader from "./src/components/shared/AppHeader";
+import AdminAgendamentosScreen from "./src/features/admin/screens/AdminAgendamentosScreen";
+import AdminVisaoGeralScreen from "./src/features/admin/screens/AdminVisaoGeralScreen";
 import AuthScreen from "./src/features/auth/screens/AuthScreen";
 import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
 import AgendamentosScreen from "./src/screens/AgendamentosScreen";
@@ -33,7 +35,7 @@ function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
 }
 
 function RootNavigator() {
-  const { autenticado, inicializando, logout } = useAuth();
+  const { autenticado, inicializando, usuario, logout } = useAuth();
   const [telaAtiva, setTelaAtiva] = useState("Inicio");
   const [parametrosRota, setParametrosRota] = useState({});
 
@@ -88,10 +90,22 @@ function RootNavigator() {
     goBack: () => navegarPara("Inicio"),
   };
 
+  const isAdmin =
+    String(usuario?.perfil || usuario?.tipo || '')
+      .trim()
+      .toLowerCase() === 'admin';
+
   const renderizarTela = () => {
     switch (telaAtiva) {
       case "Inicio":
-        return <HomeScreen navigation={navigation} />;
+        return isAdmin ? (
+          <AdminVisaoGeralScreen navigation={navigation} />
+        ) : (
+          <HomeScreen navigation={navigation} />
+        );
+
+      case "AdminAgendamentos":
+        return <AdminAgendamentosScreen navigation={navigation} />;
 
       case "Clinicas":
         return (

@@ -13,14 +13,37 @@ import {
   Keyboard,
   Platform,
   TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { listarEspecialidades, listarProfissionais } from '../../../lib/profissionaisApi';
+import {
+  cadastrarProfissionalAdmin,
+  listarEspecialidades,
+  listarProfissionais,
+} from '../../../lib/profissionaisApi';
+import api from '../../../lib/api';
 import AgendarConsultaModal from '../components/AgendarConsultaModal';
 import { useAuth } from '../../../shared/context/AuthContext';
 import AppHeader from '../../../components/shared/AppHeader';
 import Button from '../../../components/shared/Button';
 import { colors } from '../../../shared/theme/colors';
+import {
+  limparDigitos,
+  mascaraCPF,
+  mascaraTelefone,
+} from '../../../shared/utils/masks';
+
+const FORM_PROF_INICIAL = {
+  nome: '',
+  crm: '',
+  cpf: '',
+  telefone: '',
+  email: '',
+  senha: '',
+  id_clinica: '',
+  id_especialidade: '1',
+};
 
 function mensagemDeErro(erro) {
   if (erro?.response?.status === 401) return 'Sua sessão terminou. Entre novamente.';
@@ -109,6 +132,14 @@ function ConsultaDoPaciente({
   const [termoBusca, setTermoBusca] = useState('');
   const [dropdownEspecialidadeAberto, setDropdownEspecialidadeAberto] = useState(false);
   const [filtros, setFiltros] = useState({ busca: '', idEspecialidade: null, atualizar: false });
+
+  const [modalNovoProfAberto, setModalNovoProfAberto] = useState(false);
+  const [clinicasDisponiveis, setClinicasDisponiveis] = useState([]);
+  const [carregandoClinicasModal, setCarregandoClinicasModal] = useState(false);
+  const [salvandoProf, setSalvandoProf] = useState(false);
+  const [erroFormProf, setErroFormProf] = useState('');
+  const [seletorFormAtivo, setSeletorFormAtivo] = useState(null);
+  const [formProf, setFormProf] = useState(FORM_PROF_INICIAL);
   const carregar = useCallback(async signal => {
     const dados = await listarProfissionais({
       busca: filtros.busca || clinica?.nome || '',
@@ -141,6 +172,109 @@ function ConsultaDoPaciente({
     setDropdownEspecialidadeAberto(false);
     setFiltros({ busca: '', idEspecialidade: null, atualizar: false });
   };
+
+  const abrirModalNovoProfissional = async () => {
+    setErroFormProf('');
+    const idEspInicial =
+      catalogo.dados.length > 0
+        ? String(catalogo.dados[0].id_especialidade)
+        : '1';
+    setFormProf({
+      ...FORM_PROF_INICIAL,
+      id_especialidade: idEspInicial,
+    });
+    setModalNovoProfAberto(true);
+    setCarregandoClinicasModal(true);
+    try {
+      const { data } = await api.get('/clinicas');
+      const lista = Array.isArray(data)
+        ? data.map((c) => ({
+            id_clinica: String(c.id_clinica),
+            nome: c.User?.nome?.trim() || `Clínica #${c.id_clinica}`,
+          }))
+        : [];
+      setClinicasDisponiveis(lista);
+      if (lista.length > 0) {
+        const clinicaPreSelecionada =
+          clinica?.id != null
+            ? String(clinica.id)
+            : lista[0].id_clinica;
+        setFormProf((prev) => ({
+          ...prev,
+          id_clinica: clinicaPreSelecionada,
+        }));
+      }
+    } catch {
+      setClinicasDisponiveis([]);
+    } finally {
+      setCarregandoClinicasModal(false);
+    }
+  };
+
+  const fecharModalNovoProfissional = () => {
+    if (salvandoProf) return;
+    setModalNovoProfAberto(false);
+    setErroFormProf('');
+  };
+
+  const handleCadastrarProfissional = async () => {
+    setErroFormProf('');
+
+    if (!formProf.nome.trim()) {
+      setErroFormProf('Informe o nome completo do profissional.');
+      return;
+    }
+    if (!formProf.crm.trim()) {
+      setErroFormProf('Informe o CRM (ex: PE-00000).');
+      return;
+    }
+    if (limparDigitos(formProf.cpf).length !== 11) {
+      setErroFormProf('Informe um CPF com 11 dígitos.');
+      return;
+    }
+    if (!limparDigitos(formProf.telefone)) {
+      setErroFormProf('Informe o telefone do profissional.');
+      return;
+    }
+    if (!formProf.email.trim()) {
+      setErroFormProf('Informe o e-mail de acesso.');
+      return;
+    }
+    if (!formProf.senha || formProf.senha.length < 6) {
+      setErroFormProf('A senha de acesso deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    setSalvandoProf(true);
+    try {
+      await cadastrarProfissionalAdmin(formProf);
+      setModalNovoProfAberto(false);
+      setFiltros((f) => ({ ...f, atualizar: true }));
+      lista.repetir();
+    } catch (err) {
+      const msg =
+        err.response?.data?.mensagem ||
+        err.response?.data?.erro ||
+        err.response?.data?.message ||
+        'Erro ao cadastrar profissional no banco de dados.';
+      setErroFormProf(msg);
+    } finally {
+      setSalvandoProf(false);
+    }
+  };
+
+  const nomeClinicaSelecionadaForm =
+    clinicasDisponiveis.find(
+      (c) => String(c.id_clinica) === String(formProf.id_clinica)
+    )?.nome ||
+    (carregandoClinicasModal
+      ? 'Carregando clínicas...'
+      : 'Nenhuma clínica selecionada');
+
+  const nomeEspecialidadeSelecionadaForm =
+    catalogo.dados.find(
+      (e) => String(e.id_especialidade) === String(formProf.id_especialidade)
+    )?.nome || 'Clínica Geral';
   const especialidades = [{ id_especialidade: null, nome: 'Todas as especialidades' }, ...catalogo.dados];
   const especialidadeSelecionada = filtros.idEspecialidade == null
     ? 'Todas as especialidades'
@@ -199,7 +333,7 @@ function ConsultaDoPaciente({
         {mostrarBotaoNovoProfissional ? (
           <Button
             leftIcon="plus"
-            onPress={onNovoProfissional}
+            onPress={abrirModalNovoProfissional}
             style={styles.newProfessionalButton}
           >
             Novo Profissional
@@ -365,6 +499,273 @@ function ConsultaDoPaciente({
           onClose={() => setProfissionalSelecionado(null)}
         />
       ) : null}
+
+      {/* Modal Vincular Profissional (Admin) */}
+      <Modal
+        visible={modalNovoProfAberto}
+        transparent
+        animationType="slide"
+        onRequestClose={fecharModalNovoProfissional}
+      >
+        <KeyboardAvoidingView
+          style={styles.dropdownBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={fecharModalNovoProfissional}
+          />
+          <View style={styles.vincularModalCard}>
+            <Text style={styles.vincularSectionHeader}>
+              VINCULAR PROFISSIONAL
+            </Text>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.vincularFormContent}
+            >
+              {erroFormProf ? (
+                <View style={styles.vincularErrorBanner}>
+                  <Text style={styles.vincularErrorText}>{erroFormProf}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.vincularFieldLabel}>NOME COMPLETO</Text>
+              <TextInput
+                style={styles.vincularInput}
+                value={formProf.nome}
+                onChangeText={(t) =>
+                  setFormProf((p) => ({ ...p, nome: t }))
+                }
+                placeholder="Dr. Nome Sobrenome"
+                placeholderTextColor={colors.textPlaceholder}
+                autoComplete="off"
+              />
+
+              <Text style={styles.vincularFieldLabel}>CRM</Text>
+              <TextInput
+                style={styles.vincularInput}
+                value={formProf.crm}
+                onChangeText={(t) =>
+                  setFormProf((p) => ({ ...p, crm: t }))
+                }
+                placeholder="PE-00000"
+                placeholderTextColor={colors.textPlaceholder}
+                autoCapitalize="characters"
+                autoComplete="off"
+              />
+
+              <View style={styles.vincularTwoColRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.vincularFieldLabel}>CPF</Text>
+                  <TextInput
+                    style={styles.vincularInput}
+                    value={formProf.cpf}
+                    onChangeText={(t) =>
+                      setFormProf((p) => ({ ...p, cpf: mascaraCPF(t) }))
+                    }
+                    placeholder="000.000.000-00"
+                    placeholderTextColor={colors.textPlaceholder}
+                    keyboardType="number-pad"
+                    maxLength={14}
+                    autoComplete="off"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.vincularFieldLabel}>TELEFONE</Text>
+                  <TextInput
+                    style={styles.vincularInput}
+                    value={formProf.telefone}
+                    onChangeText={(t) =>
+                      setFormProf((p) => ({
+                        ...p,
+                        telefone: mascaraTelefone(t),
+                      }))
+                    }
+                    placeholder="(81) 98888-0000"
+                    placeholderTextColor={colors.textPlaceholder}
+                    keyboardType="phone-pad"
+                    maxLength={15}
+                    autoComplete="off"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.vincularFieldLabel}>E-MAIL DE ACESSO</Text>
+              <TextInput
+                style={styles.vincularInput}
+                value={formProf.email}
+                onChangeText={(t) =>
+                  setFormProf((p) => ({ ...p, email: t }))
+                }
+                placeholder="medico@prontovital.com"
+                placeholderTextColor={colors.textPlaceholder}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+              />
+
+              <Text style={styles.vincularFieldLabel}>SENHA DE ACESSO</Text>
+              <TextInput
+                style={styles.vincularInput}
+                value={formProf.senha}
+                onChangeText={(t) =>
+                  setFormProf((p) => ({ ...p, senha: t }))
+                }
+                placeholder="Mínimo 6 caracteres"
+                placeholderTextColor={colors.textPlaceholder}
+                secureTextEntry
+                autoCapitalize="none"
+                autoComplete="off"
+                textContentType="oneTimeCode"
+              />
+
+              <Text style={styles.vincularFieldLabel}>CLÍNICA VINCULADA</Text>
+              <TouchableOpacity
+                style={styles.vincularSelectTrigger}
+                onPress={() => setSeletorFormAtivo('clinica')}
+              >
+                <Text style={styles.vincularSelectText} numberOfLines={1}>
+                  {nomeClinicaSelecionadaForm}
+                </Text>
+                <Feather
+                  name="chevron-down"
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+
+              <Text style={styles.vincularFieldLabel}>
+                ESPECIALIDADE DO MÉDICO
+              </Text>
+              <TouchableOpacity
+                style={styles.vincularSelectTrigger}
+                onPress={() => setSeletorFormAtivo('especialidade')}
+              >
+                <Text style={styles.vincularSelectText} numberOfLines={1}>
+                  {nomeEspecialidadeSelecionadaForm}
+                </Text>
+                <Feather
+                  name="chevron-down"
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+
+              <View style={styles.vincularFooterRow}>
+                <TouchableOpacity
+                  style={styles.vincularSubmitBtn}
+                  disabled={salvandoProf}
+                  onPress={handleCadastrarProfissional}
+                >
+                  {salvandoProf ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.vincularSubmitBtnText}>Cadastrar</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.vincularCancelBtn}
+                  disabled={salvandoProf}
+                  onPress={fecharModalNovoProfissional}
+                >
+                  <Text style={styles.vincularCancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Sub-modal para selecionar Clínica ou Especialidade no cadastro */}
+      <Modal
+        visible={!!seletorFormAtivo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSeletorFormAtivo(null)}
+      >
+        <View style={styles.dropdownBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSeletorFormAtivo(null)}
+          />
+          <View style={styles.dropdownPanel}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>
+                {seletorFormAtivo === 'clinica'
+                  ? 'Selecione a Clínica Vinculada'
+                  : 'Selecione a Especialidade do Médico'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSeletorFormAtivo(null)}
+                style={styles.dropdownClose}
+              >
+                <Feather name="x" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={
+                seletorFormAtivo === 'clinica'
+                  ? clinicasDisponiveis.map((c) => ({
+                      id: String(c.id_clinica),
+                      nome: c.nome,
+                    }))
+                  : catalogo.dados.map((e) => ({
+                      id: String(e.id_especialidade),
+                      nome: e.nome,
+                    }))
+              }
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                const selecionada =
+                  seletorFormAtivo === 'clinica'
+                    ? String(formProf.id_clinica) === item.id
+                    : String(formProf.id_especialidade) === item.id;
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (seletorFormAtivo === 'clinica') {
+                        setFormProf((p) => ({ ...p, id_clinica: item.id }));
+                      } else {
+                        setFormProf((p) => ({
+                          ...p,
+                          id_especialidade: item.id,
+                        }));
+                      }
+                      setSeletorFormAtivo(null);
+                    }}
+                    style={[
+                      styles.dropdownOption,
+                      selecionada && styles.dropdownOptionSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        selecionada && styles.dropdownOptionTextSelected,
+                      ]}
+                    >
+                      {item.nome}
+                    </Text>
+                    {selecionada ? (
+                      <Feather
+                        name="check"
+                        size={18}
+                        color={colors.primary}
+                      />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -638,5 +1039,109 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 16,
+  },
+  vincularModalCard: {
+    width: '100%',
+    maxHeight: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 22,
+    elevation: 8,
+  },
+  vincularSectionHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  vincularFormContent: {
+    paddingBottom: 6,
+  },
+  vincularErrorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  vincularErrorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  vincularFieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  vincularInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 44,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  vincularTwoColRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  vincularSelectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 44,
+  },
+  vincularSelectText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+    marginRight: 8,
+  },
+  vincularFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 22,
+  },
+  vincularSubmitBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    minWidth: 115,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vincularSubmitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  vincularCancelBtn: {
+    borderWidth: 1,
+    borderColor: '#2563EB',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vincularCancelBtnText: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
