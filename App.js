@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppHeader from './src/components/shared/AppHeader';
-import AuthScreen from './src/features/auth/screens/AuthScreen';
-import ProfissionaisScreen from './src/features/auth/screens/ConsultarProfissionaisScreen';
-import ClinicasScreen from './src/screens/ClinicasScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import PerfilScreen from './src/screens/PerfilScreen';
-import { AuthProvider, useAuth } from './src/shared/context/AuthContext';
-import { colors } from './src/shared/theme/colors';
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import AppHeader from "./src/components/shared/AppHeader";
+import AuthScreen from "./src/features/auth/screens/AuthScreen";
+import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
+import AgendamentosScreen from "./src/screens/AgendamentosScreen";
+import ClinicasScreen from "./src/screens/ClinicasScreen";
+import HomeScreen from "./src/screens/HomeScreen";
+import PerfilScreen from "./src/screens/PerfilScreen";
+import { AuthProvider, useAuth } from "./src/shared/context/AuthContext";
+import { colors } from "./src/shared/theme/colors";
 
 function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
   return (
@@ -32,8 +33,8 @@ function TelaEmConstrucao({ titulo, telaAtiva, navegarPara }) {
 }
 
 function RootNavigator() {
-  const { autenticado, inicializando, usuario, logout } = useAuth();
-  const [telaAtiva, setTelaAtiva] = useState('Inicio');
+  const { autenticado, inicializando, logout } = useAuth();
+  const [telaAtiva, setTelaAtiva] = useState("Inicio");
   const [parametrosRota, setParametrosRota] = useState({});
 
   const navegarPara = (nomeTela, params = {}) => {
@@ -43,21 +44,21 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!autenticado) {
-      setTelaAtiva('Inicio');
+      setTelaAtiva("Inicio");
       setParametrosRota({});
     }
   }, [autenticado]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
+      "hardwareBackPress",
       () => {
-        if (autenticado && telaAtiva !== 'Inicio') {
-          navegarPara('Inicio');
+        if (autenticado && telaAtiva !== "Inicio") {
+          navegarPara("Inicio");
           return true;
         }
         return false;
-      }
+      },
     );
     return () => subscription.remove();
   }, [autenticado, telaAtiva]);
@@ -84,45 +85,39 @@ function RootNavigator() {
 
   const navigation = {
     navigate: (nomeTela, params) => navegarPara(nomeTela, params),
-    goBack: () => navegarPara('Inicio'),
+    goBack: () => navegarPara("Inicio"),
   };
 
   const renderizarTela = () => {
     switch (telaAtiva) {
-      case 'Inicio':
+      case "Inicio":
         return <HomeScreen navigation={navigation} />;
 
-      case 'Clinicas':
+      case "Clinicas":
         return (
           <ClinicasScreen
             navigation={navigation}
             onNavigateToProfissionais={(params) =>
-              navegarPara('Profissionais', params)
+              navegarPara("Profissionais", params)
             }
             onLogout={logout}
           />
         );
 
-      case 'Profissionais':
+      case "Profissionais":
         return (
           <ProfissionaisScreen
             navigation={navigation}
-            filtroInicialClinica={parametrosRota?.clinicaNome || ''}
+            filtroInicialClinica={parametrosRota?.clinicaNome || ""}
             route={{ params: parametrosRota }}
-            onVoltar={() => navegarPara('Inicio')}
+            onVoltar={() => navegarPara("Inicio")}
           />
         );
 
-      case 'Agendamentos':
-        return (
-          <TelaEmConstrucao
-            titulo="Meus Agendamentos"
-            telaAtiva="Agendamentos"
-            navegarPara={navegarPara}
-          />
-        );
+      case "Agendamentos":
+        return <AgendamentosScreen navigation={navigation} />;
 
-      case 'HistoricoTriagens':
+      case "HistoricoTriagens":
         return (
           <TelaEmConstrucao
             titulo="Histórico de Triagens"
@@ -131,7 +126,7 @@ function RootNavigator() {
           />
         );
 
-      case 'Perfil':
+      case "Perfil":
         return <PerfilScreen navigation={navigation} />;
 
       default:
@@ -165,24 +160,24 @@ const styles = StyleSheet.create({
   loadingScreen: {
     flex: 1,
     backgroundColor: colors.brandDark,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   placeholderContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 24,
   },
   placeholderTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textPrimary,
     marginBottom: 8,
   },
   placeholderSubtitle: {
     fontSize: 14,
     color: colors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
