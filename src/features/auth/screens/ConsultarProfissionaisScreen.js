@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { listarEspecialidades, listarProfissionais } from '../../../lib/profissionaisApi';
+import AgendarConsultaModal from '../components/AgendarConsultaModal';
 import { useAuth } from '../../../shared/context/AuthContext';
 import AppHeader from '../../../components/shared/AppHeader';
 import Button from '../../../components/shared/Button';
@@ -88,6 +89,8 @@ export default function ProfissionaisScreen({
         idClinica={id}
         mostrarBotaoNovoProfissional={administrador}
         onNovoProfissional={() => navegarPara('CadastroProfissional')}
+        pacienteId={usuario?.id_paciente}
+        podeAgendar={paciente}
       />
     </View>
   );
@@ -98,8 +101,11 @@ function ConsultaDoPaciente({
   idClinica,
   mostrarBotaoNovoProfissional,
   onNovoProfissional,
+  pacienteId,
+  podeAgendar,
 }) {
   const [clinica, setClinica] = useState((nomeClinica || idClinica != null) ? { nome: nomeClinica, id: idClinica } : null);
+  const [profissionalSelecionado, setProfissionalSelecionado] = useState(null);
   const [termoBusca, setTermoBusca] = useState('');
   const [dropdownEspecialidadeAberto, setDropdownEspecialidadeAberto] = useState(false);
   const [filtros, setFiltros] = useState({ busca: '', idEspecialidade: null, atualizar: false });
@@ -170,6 +176,17 @@ function ConsultaDoPaciente({
             </View>
           </View>
         </View>
+        {podeAgendar ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`Agendar consulta com ${nome}`}
+            onPress={() => setProfissionalSelecionado(item)}
+            style={styles.agendarButton}
+          >
+            <Feather name="calendar" size={16} color="#FFFFFF" />
+            <Text style={styles.agendarButtonText}>Agendar consulta</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
@@ -334,6 +351,15 @@ function ConsultaDoPaciente({
           </View>
         </View>
       </Modal>
+      {profissionalSelecionado ? (
+        <AgendarConsultaModal
+          visible
+          profissional={profissionalSelecionado}
+          pacienteId={pacienteId}
+          clinicaInicial={clinica}
+          onClose={() => setProfissionalSelecionado(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -512,6 +538,22 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
+  },
+  agendarButton: {
+    minHeight: 44,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  agendarButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   nomeProfissional: {
     fontSize: 15,
