@@ -5,13 +5,12 @@ export async function cadastrarPaciente(payload) {
   return data;
 }
 
-export async function buscarPerfilPaciente(usuario) {
+export async function resolverIdPaciente(usuario) {
   const idPacienteDireto =
     usuario?.id_paciente || usuario?.paciente?.id_paciente;
 
   if (idPacienteDireto) {
-    const { data } = await api.get(`/pacientes/${idPacienteDireto}`);
-    return data;
+    return idPacienteDireto;
   }
 
   // Plano B caso o login retorne apenas id_user sem id_paciente
@@ -24,12 +23,15 @@ export async function buscarPerfilPaciente(usuario) {
       p.User?.email === usuario?.email,
   );
 
-  if (encontrado?.id_paciente) {
-    const { data } = await api.get(`/pacientes/${encontrado.id_paciente}`);
-    return data;
-  }
+  return encontrado?.id_paciente || null;
+}
 
-  return null;
+export async function buscarPerfilPaciente(usuario) {
+  const idPaciente = await resolverIdPaciente(usuario);
+  if (!idPaciente) return null;
+
+  const { data } = await api.get(`/pacientes/${idPaciente}`);
+  return data;
 }
 
 export async function atualizarPerfilUsuario(payload) {
@@ -39,5 +41,21 @@ export async function atualizarPerfilUsuario(payload) {
 
 export async function cancelarContaUsuario() {
   const { data } = await api.patch("/usuarios/perfil/cancelar");
+  return data;
+}
+
+export async function buscarAgendamentosPaciente(usuario) {
+  const idPaciente = await resolverIdPaciente(usuario);
+  if (!idPaciente) return { idPaciente: null, agendamentos: [] };
+
+  const { data } = await api.get(`/pacientes/${idPaciente}/agendamentos`);
+  const agendamentos = Array.isArray(data) ? data : data?.agendamentos || [];
+  return { idPaciente, agendamentos };
+}
+
+export async function cancelarAgendamentoPaciente(idPaciente, idAgendamento) {
+  const { data } = await api.patch(
+    `/pacientes/${idPaciente}/agendamentos/${idAgendamento}/cancelar`,
+  );
   return data;
 }
