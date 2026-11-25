@@ -46,19 +46,46 @@ export const profissionalService = {
 
       if (Array.isArray(profissionais)) {
         profissionais.forEach((prof) => {
+          const nomeEspecialidade = prof.Especialidade?.nome;
           if (Array.isArray(prof.Clinicas)) {
             prof.Clinicas.forEach((c) => {
               const id = c.id_clinica;
-              contagem[id] = (contagem[id] || 0) + 1;
+              if (!resumo[id]) {
+                resumo[id] = { total: 0, especialidades: [] };
+              }
+              resumo[id].total += 1;
+              if (
+                nomeEspecialidade &&
+                !resumo[id].especialidades.includes(nomeEspecialidade)
+              ) {
+                resumo[id].especialidades.push(nomeEspecialidade);
+              }
             });
           }
         });
       }
 
-      return contagem;
-    } catch {
+      return resumo;
+    } catch (error) {
+      console.warn(
+        "[API] Erro ao obter resumo de profissionais por clínica:",
+        error.message,
+      );
       return {};
     }
+  },
+
+  /**
+   * Obtém apenas a contagem de profissionais por ID de clínica.
+   * Retorna um mapa { [id_clinica]: number }.
+   */
+  async obterContagemPorClinica() {
+    const resumo = await this.obterResumoPorClinica();
+    const contagem = {};
+    Object.keys(resumo).forEach((id) => {
+      contagem[id] = resumo[id].total;
+    });
+    return contagem;
   },
 };
 

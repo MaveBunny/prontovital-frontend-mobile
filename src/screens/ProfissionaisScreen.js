@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,70 +7,60 @@ import {
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   RefreshControl,
-} from 'react-native';
-import { profissionalService } from '../services/api';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AppHeader from "../components/shared/AppHeader";
+import { profissionalService } from "../services/api";
 
 /**
  * Tela de Listagem e Consulta de Profissionais.
- * Suporta filtro inicial por clínica via parâmetros de navegação.
- *
- * @param {Object} props
- * @param {Object} [props.route] - Parâmetros da rota (React Navigation)
- * @param {Object} [props.navigation] - Navegação (React Navigation)
- * @param {string} [props.filtroInicialClinica] - Nome da clínica para filtrar inicialmente
- * @param {Function} [props.onVoltar] - Callback para voltar à tela anterior
+ * Utiliza o AppHeader padrão com menu sanduíche funcional e consome dados reais do backend.
  */
 export default function ProfissionaisScreen({
   route,
   navigation,
-  filtroInicialClinica = '',
-  onVoltar,
+  filtroInicialClinica = "",
 }) {
-  // Obtém o nome da clínica passado por parâmetro de rota ou por prop
-  const clinicaParam = route?.params?.clinicaNome || filtroInicialClinica || '';
+  const clinicaParam =
+    route?.params?.clinicaNome || filtroInicialClinica || "";
 
   const [filtroClinica, setFiltroClinica] = useState(clinicaParam);
-  const [termoBusca, setTermoBusca] = useState('');
+  const [termoBusca, setTermoBusca] = useState("");
   const [profissionais, setProfissionais] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
-  const [erro, setErro] = useState(null);
 
-  // Sincroniza se o parâmetro mudar externamente
   useEffect(() => {
-    if (clinicaParam) {
-      setFiltroClinica(clinicaParam);
-    }
+    setFiltroClinica(clinicaParam);
   }, [clinicaParam]);
 
-  /**
-   * Carrega os profissionais a partir da API REST.
-   */
-  const carregarProfissionais = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setAtualizando(true);
-      } else {
-        setCarregando(true);
+  const carregarProfissionais = useCallback(
+    async (isRefresh = false) => {
+      try {
+        if (isRefresh) {
+          setAtualizando(true);
+        } else {
+          setCarregando(true);
+        }
+
+        const termo = filtroClinica || termoBusca;
+        const data = await profissionalService.listar({ busca: termo });
+
+        setProfissionais(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.warn(
+          "[ProfissionaisScreen] Erro ao carregar profissionais:",
+          err.message,
+        );
+        setProfissionais([]);
+      } finally {
+        setCarregando(false);
+        setAtualizando(false);
       }
-      setErro(null);
-
-      // Se houver filtro de clínica ativo, usa como busca principal, ou o termo digitado
-      const termo = filtroClinica || termoBusca;
-      const data = await profissionalService.listar({ busca: termo });
-
-      setProfissionais(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('[ProfissionaisScreen] Erro ao carregar profissionais:', err);
-      setErro('Não foi possível carregar os profissionais.');
-    } finally {
-      setCarregando(false);
-      setAtualizando(false);
-    }
-  }, [filtroClinica, termoBusca]);
+    },
+    [filtroClinica, termoBusca],
+  );
 
   useEffect(() => {
     carregarProfissionais();
@@ -81,43 +71,41 @@ export default function ProfissionaisScreen({
   };
 
   const handleRemoverFiltroClinica = () => {
-    setFiltroClinica('');
-  };
-
-  const handleVoltar = () => {
-    if (onVoltar) {
-      onVoltar();
-      return;
-    }
-    if (navigation && typeof navigation.goBack === 'function') {
-      navigation.goBack();
-    }
+    setFiltroClinica("");
   };
 
   const renderCardProfissional = ({ item }) => {
-    const nome = item.User?.nome || 'Profissional';
-    const especialidade = item.Especialidade?.nome || 'Especialidade Geral';
-    const conselho = item.conselho ? `${item.conselho}: ${item.registro_profissional || ''}` : '';
+    const nome = item.User?.nome || "Profissional";
+    const especialidade = item.Especialidade?.nome || "";
+    const conselho = item.conselho
+      ? `${item.conselho}: ${item.registro_profissional || ""}`
+      : "";
     const clinicasNomes = Array.isArray(item.Clinicas)
-      ? item.Clinicas.map((c) => c.User?.nome).filter(Boolean).join(', ')
-      : '';
+      ? item.Clinicas.map((c) => c.User?.nome).filter(Boolean).join(", ")
+      : "";
 
     return (
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👨‍⚕️</Text>
+            <Ionicons name="person-outline" size={22} color="#0D9488" />
           </View>
 
           <View style={styles.cardInfo}>
             <Text style={styles.nomeProfissional}>{nome}</Text>
-            <View style={styles.badgeEspecialidade}>
-              <Text style={styles.badgeEspecialidadeTexto}>{especialidade}</Text>
-            </View>
-            {conselho ? <Text style={styles.conselhoText}>{conselho}</Text> : null}
+            {especialidade ? (
+              <View style={styles.badgeEspecialidade}>
+                <Text style={styles.badgeEspecialidadeTexto}>
+                  {especialidade}
+                </Text>
+              </View>
+            ) : null}
+            {conselho ? (
+              <Text style={styles.conselhoText}>{conselho}</Text>
+            ) : null}
             {clinicasNomes ? (
               <View style={styles.clinicaRow}>
-                <Text style={styles.clinicaIcone}>🏥</Text>
+                <Ionicons name="business-outline" size={12} color="#2563EB" />
                 <Text style={styles.clinicaText} numberOfLines={1}>
                   {clinicasNomes}
                 </Text>
@@ -130,25 +118,18 @@ export default function ProfissionaisScreen({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+    <View style={styles.container}>
+      <AppHeader
+        telaAtiva="Profissionais"
+        onNavigate={(rota) => navigation?.navigate?.(rota)}
+      />
 
-      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.botaoVoltar}
-            onPress={handleVoltar}
-            accessibilityRole="button"
-            accessibilityLabel="Voltar para clínicas"
-          >
-            <Text style={styles.botaoVoltarTexto}>‹ Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitulo}>Profissionais</Text>
-          <View style={{ width: 60 }} />
-        </View>
+        <Text style={styles.titulo}>Profissionais</Text>
+        <Text style={styles.subtitulo}>
+          Encontre especialistas disponíveis nas clínicas credenciadas.
+        </Text>
 
-        {/* Tag indicadora do Filtro Ativo por Clínica */}
         {filtroClinica ? (
           <View style={styles.filtroAtivoContainer}>
             <Text style={styles.filtroAtivoLabel}>Filtrando por clínica:</Text>
@@ -162,16 +143,16 @@ export default function ProfissionaisScreen({
                 accessibilityRole="button"
                 accessibilityLabel="Remover filtro de clínica"
               >
-                <Text style={styles.removerTagTexto}>✕</Text>
+                <Ionicons name="close" size={16} color="#64748B" />
               </TouchableOpacity>
             </View>
           </View>
         ) : (
           <View style={styles.buscaContainer}>
-            <Text style={styles.iconeBusca}>🔍</Text>
+            <Ionicons name="search-outline" size={18} color="#94A3B8" />
             <TextInput
               style={styles.inputBusca}
-              placeholder="Buscar por profissional ou clínica"
+              placeholder="Buscar por profissional ou clínica..."
               placeholderTextColor="#94A3B8"
               value={termoBusca}
               onChangeText={setTermoBusca}
@@ -182,11 +163,9 @@ export default function ProfissionaisScreen({
         )}
       </View>
 
-      {/* Conteúdo */}
       {carregando && !atualizando ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0284C7" />
-          <Text style={styles.loadingTexto}>Carregando profissionais...</Text>
+          <ActivityIndicator size="large" color="#2563EB" />
         </View>
       ) : (
         <FlatList
@@ -199,248 +178,227 @@ export default function ProfissionaisScreen({
             <RefreshControl
               refreshing={atualizando}
               onRefresh={onRefresh}
-              colors={['#0284C7', '#0D9488']}
-              tintColor="#0284C7"
+              colors={["#2563EB"]}
+              tintColor="#2563EB"
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>👨‍⚕️</Text>
-              <Text style={styles.emptyTitle}>Nenhum profissional encontrado</Text>
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="search-outline" size={24} color="#64748B" />
+              </View>
+              <Text style={styles.emptyTitle}>
+                Nenhum profissional encontrado
+              </Text>
               <Text style={styles.emptySub}>
                 {filtroClinica
                   ? `Nenhum profissional vinculado à clínica "${filtroClinica}".`
-                  : 'Nenhum profissional cadastrado com esse critério.'}
+                  : "Tente buscar por outro nome ou clínica."}
               </Text>
               {filtroClinica ? (
                 <TouchableOpacity
                   style={styles.botaoVerTodos}
                   onPress={handleRemoverFiltroClinica}
                 >
-                  <Text style={styles.botaoVerTodosTexto}>Ver todos os profissionais</Text>
+                  <Text style={styles.botaoVerTodosTexto}>
+                    Ver todos os profissionais
+                  </Text>
                 </TouchableOpacity>
               ) : null}
             </View>
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
-    backgroundColor: '#F8FAFC',
+    paddingTop: 20,
+    paddingBottom: 14,
+    backgroundColor: "#F8FAFC",
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+  titulo: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 6,
   },
-  botaoVoltar: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  botaoVoltarTexto: {
+  subtitulo: {
     fontSize: 14,
-    color: '#0284C7',
-    fontWeight: '700',
-  },
-  headerTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: "#64748B",
+    lineHeight: 20,
+    marginBottom: 16,
   },
   filtroAtivoContainer: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: "#BAE6FD",
     borderRadius: 12,
     padding: 10,
-    marginBottom: 6,
   },
   filtroAtivoLabel: {
     fontSize: 11,
-    color: '#0369A1',
-    fontWeight: '600',
+    color: "#0369A1",
+    fontWeight: "600",
     marginBottom: 4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   tagClinica: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E0F2FE',
+    borderColor: "#E0F2FE",
   },
   tagClinicaTexto: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#0284C7',
+    fontWeight: "700",
+    color: "#2563EB",
     flex: 1,
   },
   removerTagBotao: {
     paddingLeft: 8,
   },
-  removerTagTexto: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
   buscaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  iconeBusca: {
-    fontSize: 14,
-    marginRight: 8,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 14,
+    height: 48,
   },
   inputBusca: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: "#0F172A",
+    marginLeft: 10,
   },
   listContent: {
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 24,
+    flexGrow: 1,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
     marginHorizontal: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    elevation: 2,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderColor: "#E2E8F0",
   },
   cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#F0FDFA",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
   },
   cardInfo: {
     flex: 1,
   },
   nomeProfissional: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 4,
   },
   badgeEspecialidade: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    alignSelf: "flex-start",
+    backgroundColor: "#E6F7F0",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 12,
     marginBottom: 4,
   },
   badgeEspecialidadeTexto: {
     fontSize: 11,
-    color: '#15803D',
-    fontWeight: '600',
+    color: "#0D9488",
+    fontWeight: "600",
   },
   conselhoText: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 12,
+    color: "#64748B",
     marginBottom: 2,
   },
   clinicaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     marginTop: 2,
-  },
-  clinicaIcone: {
-    fontSize: 11,
-    marginRight: 4,
   },
   clinicaText: {
     fontSize: 12,
-    color: '#0284C7',
-    fontWeight: '500',
+    color: "#2563EB",
+    fontWeight: "500",
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  loadingTexto: {
-    marginTop: 10,
-    fontSize: 13,
-    color: '#64748B',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#EDF2F7",
+    marginHorizontal: 16,
+    paddingVertical: 44,
     paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 12,
+  emptyIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
+    textAlign: "center",
   },
   emptySub: {
     fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
+    color: "#94A3B8",
+    textAlign: "center",
     marginBottom: 16,
   },
   botaoVerTodos: {
-    backgroundColor: '#0284C7',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: "#2563EB",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
   },
   botaoVerTodosTexto: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

@@ -1,23 +1,28 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { IconeCasinha, IconeTelefone } from './Icons';
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 /**
- * Card de Clínica com design fiel ao protótipo visual do ProntoVital.
+ * Card de Clínica seguindo o layout oficial do ProntoVital (Figma).
  *
  * @param {Object} props
  * @param {Object} props.clinica - Dados da clínica retornados pela API
  * @param {number} props.totalProfissionais - Quantidade real de profissionais vinculados
+ * @param {string[]} [props.especialidades] - Lista de especialidades reais dos profissionais da clínica
  * @param {Function} props.onVerProfissionais - Callback de navegação
  */
-export default function ClinicaCard({ clinica, totalProfissionais = 0, onVerProfissionais }) {
-  const nomeClinica = clinica.User?.nome || 'Clínica';
-  const bairro = clinica.bairro || '';
-  const endereco = clinica.User?.endereco || '';
-  const telefone = clinica.User?.telefone || '';
+export default function ClinicaCard({
+  clinica,
+  totalProfissionais = 0,
+  especialidades = [],
+  onVerProfissionais,
+}) {
+  const nomeClinica = clinica.User?.nome || "Clínica";
+  const bairro = clinica.bairro || "";
+  const endereco = clinica.User?.endereco || "";
+  const telefone = clinica.User?.telefone || "";
 
-  // Formato: "Bairro — endereço" conforme a imagem
-  let localizacao = '';
+  let localizacao = "";
   if (bairro && endereco) {
     localizacao = `${bairro} — ${endereco}`;
   } else if (bairro) {
@@ -26,15 +31,30 @@ export default function ClinicaCard({ clinica, totalProfissionais = 0, onVerProf
     localizacao = endereco;
   }
 
-  // Especialidade exibida na tag verde (padrão Clínica Geral ou retornada da API)
-  const especialidade = clinica.especialidade || 'Clínica Geral';
+  const listaEspecialidades =
+    Array.isArray(especialidades) && especialidades.length > 0
+      ? especialidades
+      : clinica.especialidade
+        ? [clinica.especialidade]
+        : [];
+
+  const labelProfissionais =
+    totalProfissionais === 1
+      ? "1 profissional"
+      : `${totalProfissionais} profissionais`;
 
   return (
-    <View style={styles.card}>
-      {/* Bloco Superior: Avatar da Casa + Nome e Endereço */}
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() => onVerProfissionais && onVerProfissionais(clinica)}
+      accessibilityRole="button"
+      accessibilityLabel={`Ver profissionais da clínica ${nomeClinica}`}
+    >
+      {/* Bloco Superior: Avatar + Nome, Endereço e Badges */}
       <View style={styles.headerRow}>
         <View style={styles.avatarContainer}>
-          <IconeCasinha size={26} color="#2563EB" />
+          <Ionicons name="home-outline" size={24} color="#2563EB" />
         </View>
 
         <View style={styles.headerInfo}>
@@ -46,60 +66,64 @@ export default function ClinicaCard({ clinica, totalProfissionais = 0, onVerProf
               {localizacao}
             </Text>
           ) : null}
+
+          {listaEspecialidades.length > 0 ? (
+            <View style={styles.badgesRow}>
+              {listaEspecialidades.map((esp) => (
+                <View key={esp} style={styles.badgeEspecialidade}>
+                  <Text style={styles.badgeText}>{esp}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
 
-      {/* Badge Verde Suave */}
-      <View style={styles.badgeEspecialidade}>
-        <Text style={styles.badgeText}>{especialidade}</Text>
-      </View>
-
-      {/* Linha com Telefone */}
-      {telefone ? (
+      {/* Rodapé do Card: Telefone à esquerda e Link Profissionais à direita */}
+      <View style={styles.footerRow}>
         <View style={styles.telefoneContainer}>
-          <IconeTelefone size={14} color="#64748B" />
-          <Text style={styles.telefoneText}>{telefone}</Text>
+          {telefone ? (
+            <Text style={styles.telefoneText}>{telefone}</Text>
+          ) : null}
         </View>
-      ) : null}
 
-      {/* Botão de Largura Total na Base */}
-      <TouchableOpacity
-        style={styles.botaoProfissionais}
-        activeOpacity={0.7}
-        onPress={() => onVerProfissionais && onVerProfissionais(clinica)}
-        accessibilityRole="button"
-        accessibilityLabel={`Ver profissionais da clínica ${nomeClinica}`}
-      >
-        <Text style={styles.botaoProfissionaisTexto}>
-          Ver profissionais ({totalProfissionais})
-        </Text>
-        <Text style={styles.botaoSeta}>›</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={styles.linkProfissionais}
+          activeOpacity={0.7}
+          onPress={() => onVerProfissionais && onVerProfissionais(clinica)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.linkProfissionaisTexto}>
+            {labelProfissionais}
+          </Text>
+          <Ionicons name="chevron-forward" size={15} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#EDF2F7',
+    borderColor: "#E2E8F0",
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   avatarContainer: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: 14,
-    backgroundColor: '#E0EDFF', // Azul claro suave da imagem
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 14,
   },
   headerInfo: {
@@ -107,61 +131,58 @@ const styles = StyleSheet.create({
   },
   nomeClinica: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     lineHeight: 22,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   enderecoText: {
     fontSize: 13,
-    color: '#94A3B8', // Cinza suave do subtítulo
+    color: "#64748B",
     lineHeight: 18,
   },
+  badgesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
   badgeEspecialidade: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#E8F8F0', // Fundo verde suave da imagem
-    paddingVertical: 5,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    marginTop: 12,
+    backgroundColor: "#E6F7F0",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#059669', // Verde da especialidade
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#0D9488",
+  },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
   telefoneContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 14,
+    flex: 1,
   },
   telefoneText: {
     fontSize: 13,
-    color: '#475569',
-    fontWeight: '500',
-    marginLeft: 8,
+    color: "#64748B",
+    fontWeight: "500",
   },
-  botaoProfissionais: {
-    width: '100%',
-    backgroundColor: '#E0EDFF', // Azul suave da imagem
-    borderRadius: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 14,
+  linkProfissionais: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
-  botaoProfissionaisTexto: {
-    color: '#2563EB', // Azul vibrante da imagem
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  botaoSeta: {
-    color: '#2563EB',
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 6,
-    lineHeight: 16,
+  linkProfissionaisTexto: {
+    color: "#2563EB",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
