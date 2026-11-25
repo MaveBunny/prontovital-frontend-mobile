@@ -12,7 +12,7 @@ import { AuthProvider, useAuth } from "./src/shared/context/AuthContext";
 import { colors } from "./src/shared/theme/colors";
 import HomeScreen from "./src/screens/HomeScreen";
 import ClinicasScreen from "./src/screens/ClinicasScreen";
-import ProfissionaisScreen from "./src/screens/ProfissionaisScreen";
+import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
 import AppHeader from "./src/components/shared/AppHeader";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
