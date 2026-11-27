@@ -12,6 +12,7 @@ import AppHeader from "./src/components/shared/AppHeader";
 import AdminAgendamentosScreen from "./src/features/admin/screens/AdminAgendamentosScreen";
 import AdminVisaoGeralScreen from "./src/features/admin/screens/AdminVisaoGeralScreen";
 import AuthScreen from "./src/features/auth/screens/AuthScreen";
+import ClinicaPortalScreen from "./src/features/clinica/screens/ClinicaPortalScreen";
 import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
 import AgendamentosScreen from "./src/screens/AgendamentosScreen";
 import ClinicasScreen from "./src/screens/ClinicasScreen";
@@ -38,8 +39,27 @@ function RootNavigator() {
   const { autenticado, inicializando, usuario, logout } = useAuth();
   const [telaAtiva, setTelaAtiva] = useState("Inicio");
   const [parametrosRota, setParametrosRota] = useState({});
+  const perfil = String(usuario?.perfil || usuario?.tipo || "")
+    .trim()
+    .toLowerCase();
+  const isClinica = perfil === "clinica";
+  const rotasClinica = [
+    "ClinicaVisaoGeral",
+    "ClinicaAgenda",
+    "ClinicaAgendamentos",
+    "ClinicaMedicos",
+    "ClinicaDisponibilidade",
+    "ClinicaPerfil",
+  ];
 
   const navegarPara = (nomeTela, params = {}) => {
+    if (rotasClinica.includes(nomeTela)) {
+      if (!isClinica) return;
+    } else if (isClinica) {
+      if (nomeTela !== "Inicio") return;
+      nomeTela = "ClinicaVisaoGeral";
+    }
+
     setParametrosRota(params);
     setTelaAtiva(nomeTela);
   };
@@ -48,8 +68,11 @@ function RootNavigator() {
     if (!autenticado) {
       setTelaAtiva("Inicio");
       setParametrosRota({});
+    } else if (isClinica) {
+      setTelaAtiva("ClinicaVisaoGeral");
+      setParametrosRota({});
     }
-  }, [autenticado]);
+  }, [autenticado, isClinica]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -91,14 +114,31 @@ function RootNavigator() {
   };
 
   const isAdmin =
-    String(usuario?.perfil || usuario?.tipo || '')
-      .trim()
-      .toLowerCase() === 'admin';
+    perfil === "admin";
 
   const renderizarTela = () => {
     switch (telaAtiva) {
       case "Inicio":
-        return isAdmin ? (
+        return isClinica ? (
+          <ClinicaPortalScreen
+            telaAtiva="ClinicaVisaoGeral"
+            navigation={navigation}
+          />
+        ) : isAdmin ? (
+          <AdminVisaoGeralScreen navigation={navigation} />
+        ) : (
+          <HomeScreen navigation={navigation} />
+        );
+
+      case "ClinicaVisaoGeral":
+      case "ClinicaAgenda":
+      case "ClinicaAgendamentos":
+      case "ClinicaMedicos":
+      case "ClinicaDisponibilidade":
+      case "ClinicaPerfil":
+        return isClinica ? (
+          <ClinicaPortalScreen telaAtiva={telaAtiva} navigation={navigation} />
+        ) : isAdmin ? (
           <AdminVisaoGeralScreen navigation={navigation} />
         ) : (
           <HomeScreen navigation={navigation} />
@@ -144,7 +184,14 @@ function RootNavigator() {
         return <PerfilScreen navigation={navigation} />;
 
       default:
-        return <HomeScreen navigation={navigation} />;
+        return isClinica ? (
+          <ClinicaPortalScreen
+            telaAtiva="ClinicaVisaoGeral"
+            navigation={navigation}
+          />
+        ) : (
+          <HomeScreen navigation={navigation} />
+        );
     }
   };
 
