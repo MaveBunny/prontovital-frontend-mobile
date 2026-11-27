@@ -43,11 +43,29 @@ const MENU_ITEMS = [
   },
 ];
 
+const CLINICA_MENU_ITEMS = [
+  { key: "ClinicaVisaoGeral", label: "Visão Geral", icon: "home-outline" },
+  { key: "ClinicaAgenda", label: "Agenda / Calendário", icon: "calendar-outline" },
+  { key: "ClinicaAgendamentos", label: "Agendamentos", icon: "list-outline" },
+  { key: "ClinicaMedicos", label: "Médicos", icon: "people-outline" },
+  { key: "ClinicaDisponibilidade", label: "Disponibilidade", icon: "time-outline" },
+  { key: "ClinicaPerfil", label: "Perfil da Clínica", icon: "business-outline" },
+];
+
 export default function AppHeader({ telaAtiva, onNavigate }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const { usuario, logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const isAdmin = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase() === 'admin';
+  const perfil = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase();
+  const isAdmin = perfil === 'admin';
+  const isClinica = perfil === 'clinica';
+  const itensMenu = isClinica
+    ? CLINICA_MENU_ITEMS
+    : MENU_ITEMS.filter(
+        (item) =>
+          (!item.adminOnly || isAdmin) &&
+          (!item.pacienteOnly || !isAdmin)
+      );
 
   const nomeExibicao = usuario?.nome || "Usuário";
   const inicial = nomeExibicao.charAt(0).toUpperCase();
@@ -139,11 +157,7 @@ export default function AppHeader({ telaAtiva, onNavigate }) {
 
             {/* Lista de Abas */}
             <View style={styles.navList}>
-              {MENU_ITEMS.filter(
-                (item) =>
-                  (!item.adminOnly || isAdmin) &&
-                  (!item.pacienteOnly || !isAdmin)
-              ).map((item) => {
+              {itensMenu.map((item) => {
                 const ativo = telaAtiva === item.key;
                 return (
                   <TouchableOpacity
