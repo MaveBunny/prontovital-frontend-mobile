@@ -14,6 +14,7 @@ import AdminVisaoGeralScreen from "./src/features/admin/screens/AdminVisaoGeralS
 import AuthScreen from "./src/features/auth/screens/AuthScreen";
 import ClinicaPortalScreen from "./src/features/clinica/screens/ClinicaPortalScreen";
 import ProfissionaisScreen from "./src/features/auth/screens/ConsultarProfissionaisScreen";
+import ProfissionalPortalScreen from "./src/features/profissionais/screens/ProfissionalPortalScreen";
 import AgendamentosScreen from "./src/screens/AgendamentosScreen";
 import ClinicasScreen from "./src/screens/ClinicasScreen";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -43,6 +44,7 @@ function RootNavigator() {
     .trim()
     .toLowerCase();
   const isClinica = perfil === "clinica";
+  const isProfissional = perfil === "profissional";
   const rotasClinica = [
     "ClinicaVisaoGeral",
     "ClinicaAgenda",
@@ -51,13 +53,23 @@ function RootNavigator() {
     "ClinicaDisponibilidade",
     "ClinicaPerfil",
   ];
+  const rotasProfissional = [
+    "ProfissionalAgenda",
+    "ProfissionalAgendamentos",
+    "ProfissionalPerfil",
+  ];
 
   const navegarPara = (nomeTela, params = {}) => {
     if (rotasClinica.includes(nomeTela)) {
       if (!isClinica) return;
+    } else if (rotasProfissional.includes(nomeTela)) {
+      if (!isProfissional) return;
     } else if (isClinica) {
       if (nomeTela !== "Inicio") return;
       nomeTela = "ClinicaVisaoGeral";
+    } else if (isProfissional) {
+      if (nomeTela !== "Inicio") return;
+      nomeTela = "ProfissionalAgenda";
     }
 
     setParametrosRota(params);
@@ -71,8 +83,11 @@ function RootNavigator() {
     } else if (isClinica) {
       setTelaAtiva("ClinicaVisaoGeral");
       setParametrosRota({});
+    } else if (isProfissional) {
+      setTelaAtiva("ProfissionalAgenda");
+      setParametrosRota({});
     }
-  }, [autenticado, isClinica]);
+  }, [autenticado, isClinica, isProfissional]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -126,6 +141,28 @@ function RootNavigator() {
           />
         ) : isAdmin ? (
           <AdminVisaoGeralScreen navigation={navigation} />
+        ) : isProfissional ? (
+          <ProfissionalPortalScreen
+            telaAtiva="ProfissionalAgenda"
+            navigation={navigation}
+          />
+        ) : (
+          <HomeScreen navigation={navigation} />
+        );
+
+      case "ProfissionalAgenda":
+      case "ProfissionalAgendamentos":
+      case "ProfissionalPerfil":
+        return isProfissional ? (
+          <ProfissionalPortalScreen
+            telaAtiva={telaAtiva}
+            navigation={navigation}
+          />
+        ) : isClinica ? (
+          <ClinicaPortalScreen
+            telaAtiva="ClinicaVisaoGeral"
+            navigation={navigation}
+          />
         ) : (
           <HomeScreen navigation={navigation} />
         );

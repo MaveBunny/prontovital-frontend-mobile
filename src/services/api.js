@@ -31,11 +31,26 @@ export const clinicaService = {
 };
 
 export const profissionalService = {
+  async obterPorId(idProfissional) {
+    const { data } = await api.get(`/profissionais/${idProfissional}`);
+    return data;
+  },
+
   async listar({ busca = '', idEspecialidade = '' } = {}) {
     const params = {};
     if (busca?.trim()) params.busca = busca.trim();
     if (idEspecialidade) params.id_especialidade = idEspecialidade;
     const { data } = await api.get('/profissionais', { params });
+    return data;
+  },
+
+  async listarAgendamentos(idProfissional) {
+    const { data } = await api.get(
+      `/profissionais/${idProfissional}/agendamentos`,
+    );
+    if (!Array.isArray(data)) {
+      throw new Error('A API não devolveu a lista de agendamentos.');
+    }
     return data;
   },
 
