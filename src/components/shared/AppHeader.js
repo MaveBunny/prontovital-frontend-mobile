@@ -52,6 +52,12 @@ const CLINICA_MENU_ITEMS = [
   { key: "ClinicaPerfil", label: "Perfil da Clínica", icon: "business-outline" },
 ];
 
+const PROFISSIONAL_MENU_ITEMS = [
+  { key: "ProfissionalAgenda", label: "Agenda", icon: "calendar-outline" },
+  { key: "ProfissionalAgendamentos", label: "Agendamentos", icon: "list-outline" },
+  { key: "ProfissionalPerfil", label: "Meu Perfil", icon: "person-outline" },
+];
+
 export default function AppHeader({ telaAtiva, onNavigate }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const { usuario, logout } = useAuth();
@@ -59,13 +65,16 @@ export default function AppHeader({ telaAtiva, onNavigate }) {
   const perfil = String(usuario?.perfil || usuario?.tipo || '').trim().toLowerCase();
   const isAdmin = perfil === 'admin';
   const isClinica = perfil === 'clinica';
+  const isProfissional = perfil === 'profissional';
   const itensMenu = isClinica
     ? CLINICA_MENU_ITEMS
-    : MENU_ITEMS.filter(
-        (item) =>
-          (!item.adminOnly || isAdmin) &&
-          (!item.pacienteOnly || !isAdmin)
-      );
+    : isProfissional
+      ? PROFISSIONAL_MENU_ITEMS
+      : MENU_ITEMS.filter(
+          (item) =>
+            (!item.adminOnly || isAdmin) &&
+            (!item.pacienteOnly || !isAdmin)
+        );
 
   const nomeExibicao = usuario?.nome || "Usuário";
   const inicial = nomeExibicao.charAt(0).toUpperCase();
